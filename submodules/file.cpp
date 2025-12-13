@@ -1,11 +1,160 @@
 #include <iostream>
+#include <vector>
+#include <fstream>
+#include <sstream>
 #include <string>
+#include <Eigen/Core>
+#include <opencv2/opencv.hpp>
 
-namespace SfM
+namespace SfM::File
 {
-    int loadFile(std::string path)
+    std::vector<std::vector<Eigen::Vector2f>> loadTrackedPoints(const std::string &path)
     {
-        std::cout << path << std::endl;
-        return 11;
+        std::ifstream file(path);
+        if (!file.is_open())
+            return {};
+
+        std::vector<std::vector<Eigen::Vector2f>> result;
+
+        int trackIndex, frame;
+        float x, y;
+
+        while (file >> trackIndex >> frame >> x >> y)
+        {
+            if (trackIndex >= static_cast<int>(result.size()))
+            {
+                result.resize(trackIndex + 1);
+            }
+
+            result[trackIndex].emplace_back(x, y);
+        }
+
+        return result;
     }
-} // Namespace SfM
+
+    bool drawPointsOnImage(const std::string &inputImagePath,
+                           const std::string &outputImagePath,
+                           const std::vector<Eigen::Vector2f> &uvPoints,
+                           bool drawCircles = true,
+                           int markerSize = 5,
+                           cv::Scalar color = cv::Scalar(0, 0, 255))
+    {
+        // Load image (BGR)
+        cv::Mat image = cv::imread(inputImagePath, cv::IMREAD_COLOR);
+        if (image.empty())
+            return false;
+
+        const int width = image.cols;
+        const int height = image.rows;
+
+        for (const auto &uv : uvPoints)
+        {
+            // Convert normalized UV [0,1] to pixel coordinates
+            int x = static_cast<int>(uv.x() * width);
+            int y = static_cast<int>(uv.y() * height);
+
+            // Skip points outside image
+            if (x < 0 || x >= width || y < 0 || y >= height)
+                continue;
+
+            cv::Point p(x, y);
+
+            if (drawCircles)
+            {
+                cv::circle(image, p, markerSize, color, 2);
+            }
+            else
+            {
+                cv::rectangle(
+                    image,
+                    cv::Point(x - markerSize, y - markerSize),
+                    cv::Point(x + markerSize, y + markerSize),
+                    color,
+                    2);
+            }
+        }
+
+        return cv::imwrite(outputImagePath, image);
+    }
+
+    void drawCollageWithTracks(const std::vector<std::string> &imagePaths,
+                               const std::vector<std::vector<Eigen::Vector2f>> &tracks,
+                               int startFrame,
+                               int endFrame,
+                               const std::string &outputPath,
+                               int markerSize = 5)
+    {
+        if (startFrame < 0)
+            startFrame = 0;
+        if (endFrame >= static_cast<int>(imagePaths.size()))
+            endFrame = static_cast<int>(imagePaths.size()) - 1;
+        if (startFrame > endFrame)
+            return;
+
+        // Load images and compute total collage size
+        std::vector<cv::Mat> images;
+        int totalWidth = 0;
+        int maxHeight = 0;
+
+        for (int i = startFrame; i <= endFrame; ++i)
+        {
+            cv::Mat img = cv::imread(imagePaths[i], cv::IMREAD_COLOR);
+            if (img.empty())
+                continue;
+
+            images.push_back(img);
+            totalWidth += img.cols;
+            if (img.rows > maxHeight)
+                maxHeight = img.rows;
+        }
+
+        if (images.empty())
+            return;
+
+        // Create the collage canvas
+        cv::Mat collage(maxHeight, totalWidth, images[0].type(), cv::Scalar(0, 0, 0));
+
+        // Copy images side by side and store x-offsets
+        std::vector<int> xOffsets;
+        int currentX = 0;
+        for (const auto &img : images)
+        {
+            img.copyTo(collage(cv::Rect(currentX, 0, img.cols, img.rows)));
+            xOffsets.push_back(currentX);
+            currentX += img.cols;
+        }
+
+        // Draw points and lines
+        int numTracks = static_cast<int>(tracks.size());
+        int numImages = static_cast<int>(images.size());
+
+        for (int t = 0; t < numTracks; ++t)
+        {
+            for (int f = 0; f < numImages; ++f)
+            {
+                const auto &pt = tracks[t][startFrame + f];
+                int imgWidth = images[f].cols;
+                int imgHeight = images[f].rows;
+
+                // UV -> pixel coordinates
+                int x = static_cast<int>(pt.x() * imgWidth) + xOffsets[f];
+                int y = static_cast<int>(pt.y() * imgHeight);
+
+                // Draw the point
+                cv::circle(collage, cv::Point(x, y), markerSize, cv::Scalar(0, 255, 0), -1);
+
+                // Draw line to next image if exists
+                if (f + 1 < numImages)
+                {
+                    const auto &nextPt = tracks[t][startFrame + f + 1];
+                    int nextX = static_cast<int>(nextPt.x() * images[f + 1].cols) + xOffsets[f + 1];
+                    int nextY = static_cast<int>(nextPt.y() * images[f + 1].rows);
+                    cv::line(collage, cv::Point(x, y), cv::Point(nextX, nextY), cv::Scalar(0, 0, 255), 2);
+                }
+            }
+        }
+
+        // Save output
+        cv::imwrite(outputPath, collage);
+    }
+} // Namespace SfM::file

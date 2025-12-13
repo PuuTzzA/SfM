@@ -12,4 +12,10 @@ add_executable(SfM
 
 # If you need external libraries:
 find_package(OpenCV REQUIRED)
-target_link_libraries(SfM PRIVATE ${OpenCV_LIBS})
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+
+target_link_libraries(SfM
+    PRIVATE
+        ${OpenCV_LIBS}
+        Eigen3::Eigen
+)
