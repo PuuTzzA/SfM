@@ -1,5 +1,7 @@
 #include <iostream>
 #include "submodules/file.h"
+#include "submodules/solve.h"
+#include "submodules/blender.h"
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
@@ -8,15 +10,16 @@ int main()
 {
     std::cout << "Hello SfM!" << std::endl;
 
-    auto points = SfM::File::loadTrackedPoints("../../Data/Suzanne/tracks.txt");
+    auto tracks = SfM::File::loadTrackedPoints("../../Data/Suzanne/tracks.txt");
 
-    SfM::File::drawPointsOnImage("../../Data/Suzanne/susanne_0001.png", "ouput.png", points[0]);
+    SfM::Blender::printForBlender(SfM::Solve::eightPointAlgorithm(tracks));
 
-    std::vector<std::string> paths({"../../Data/Suzanne/susanne_0001.png", "../../Data/Suzanne/susanne_0002.png", "../../Data/Suzanne/susanne_0003.png", "../../Data/Suzanne/susanne_0004.png"});
+    // SfM::File::drawPointsOnImage("../../Data/Suzanne/susanne_0001.png", "ouput.png", tracks[0]);
 
-    SfM::File::drawCollageWithTracks(paths, points, 0, 2, "collage.png");
+    // std::vector<std::string> paths({"../../Data/Suzanne/susanne_0001.png", "../../Data/Suzanne/susanne_0002.png", "../../Data/Suzanne/susanne_0003.png", "../../Data/Suzanne/susanne_0004.png"});
+    // SfM::File::drawCollageWithTracks(paths, tracks, 0, 1, "collage.png");
 
-    /* for (auto &point : points)
+    /* for (auto &point : tracks)
     {
         std::cout << "pointlolol" << std::endl;
 
