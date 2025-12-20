@@ -1,9 +1,10 @@
 #pragma once
+#include "../SfM.hpp"
 #include <string>
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
 
-namespace SfM::File
+namespace SfM::io
 {
     /**
      * @brief Reads tracked points from a file.
@@ -14,7 +15,7 @@ namespace SfM::File
      * ...
      * @return Vector of tracked points. result[0] = first track, result[0][0] = first track, first frame
      */
-    std::vector<std::vector<Eigen::Vector2f>> loadTrackedPoints(const std::string &path);
+    std::vector<std::vector<Vec2>> loadTrackedPoints(const std::string &path);
 
     /**
      * @brief Draws points on an image using UV coordinates and saves the result.
@@ -29,7 +30,7 @@ namespace SfM::File
      */
     bool drawPointsOnImage(const std::string &inputImagePath,
                            const std::string &outputImagePath,
-                           const std::vector<Eigen::Vector2f> &uvPoints,
+                           const std::vector<Vec2> &uvPoints,
                            bool drawCircles = true,
                            int markerSize = 5,
                            cv::Scalar color = cv::Scalar(0, 0, 255));
@@ -46,9 +47,9 @@ namespace SfM::File
      * @return True if the image was successfully saved, false on failure.
      */
     void drawCollageWithTracks(const std::vector<std::string> &imagePaths,
-                               const std::vector<std::vector<Eigen::Vector2f>> &tracks,
+                               const std::vector<std::vector<Vec2>> &tracks,
                                int startFrame,
                                int endFrame,
                                const std::string &outputPath,
                                int markerSize = 5);
-} // namespace SfM::File
+} // namespace SfM::io

@@ -6,9 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(SfM 
     main.cpp
-    submodules/file.cpp
-    submodules/solve.cpp
-    submodules/blender.cpp
+    submodules/io/file.cpp
+    submodules/io/blender.cpp
+    submodules/solve/solve.cpp
     # add more source files here
 )
 

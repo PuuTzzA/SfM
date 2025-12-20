@@ -1,7 +1,7 @@
 #include <iostream>
-#include "submodules/file.h"
-#include "submodules/solve.h"
-#include "submodules/blender.h"
+#include "submodules/io/file.hpp"
+#include "submodules/solve/solve.hpp"
+#include "submodules/io/blender.hpp"
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
@@ -10,9 +10,9 @@ int main()
 {
     std::cout << "Hello SfM!" << std::endl;
 
-    auto tracks = SfM::File::loadTrackedPoints("../../Data/Suzanne/tracks.txt");
+    auto tracks = SfM::io::loadTrackedPoints("../../Data/Suzanne/tracks.txt");
 
-    SfM::Blender::printForBlender(SfM::Solve::eightPointAlgorithm(tracks));
+    SfM::io::printForBlender(SfM::solve::eightPointAlgorithm(tracks));
 
     // SfM::File::drawPointsOnImage("../../Data/Suzanne/susanne_0001.png", "ouput.png", tracks[0]);
 

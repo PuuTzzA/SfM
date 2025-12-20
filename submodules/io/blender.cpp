@@ -1,8 +1,6 @@
-#include <iostream>
-#include <Eigen/Core>
-#include "solve.h"
+#include "blender.hpp"
 
-namespace SfM::Blender
+namespace SfM::io
 {
     void printForBlender(const SfMResult &res)
     {
@@ -28,4 +26,4 @@ namespace SfM::Blender
         std::cout << "]" << std::endl;
         std::cout << "# ------------------------------" << std::endl;
     }
-}
+} // Namespace SfM::io

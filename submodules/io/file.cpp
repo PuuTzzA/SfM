@@ -1,20 +1,18 @@
+#include "file.hpp"
 #include <iostream>
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include <string>
-#include <Eigen/Core>
-#include <opencv2/opencv.hpp>
 
-namespace SfM::File
+namespace SfM::io
 {
-    std::vector<std::vector<Eigen::Vector2f>> loadTrackedPoints(const std::string &path)
+    std::vector<std::vector<Vec2>> loadTrackedPoints(const std::string &path)
     {
         std::ifstream file(path);
         if (!file.is_open())
             return {};
 
-        std::vector<std::vector<Eigen::Vector2f>> result;
+        std::vector<std::vector<Vec2>> result;
 
         int trackIndex, frame;
         float x, y;
@@ -34,10 +32,10 @@ namespace SfM::File
 
     bool drawPointsOnImage(const std::string &inputImagePath,
                            const std::string &outputImagePath,
-                           const std::vector<Eigen::Vector2f> &uvPoints,
-                           bool drawCircles = true,
-                           int markerSize = 5,
-                           cv::Scalar color = cv::Scalar(0, 0, 255))
+                           const std::vector<Vec2> &uvPoints,
+                           bool drawCircles,
+                           int markerSize,
+                           cv::Scalar color)
     {
         // Load image (BGR)
         cv::Mat image = cv::imread(inputImagePath, cv::IMREAD_COLOR);
@@ -78,11 +76,11 @@ namespace SfM::File
     }
 
     void drawCollageWithTracks(const std::vector<std::string> &imagePaths,
-                               const std::vector<std::vector<Eigen::Vector2f>> &tracks,
+                               const std::vector<std::vector<Vec2>> &tracks,
                                int startFrame,
                                int endFrame,
                                const std::string &outputPath,
-                               int markerSize = 5)
+                               int markerSize)
     {
         if (startFrame < 0)
             startFrame = 0;
@@ -157,4 +155,4 @@ namespace SfM::File
         // Save output
         cv::imwrite(outputPath, collage);
     }
-} // Namespace SfM::file
+} // Namespace SfM::io

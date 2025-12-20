@@ -1,9 +1,8 @@
 #pragma once
+#include "../SfM.hpp"
 #include <iostream>
-#include <Eigen/Core>
-#include "solve.h"
 
-namespace SfM::Blender
+namespace SfM::io
 {
         void printForBlender(const SfMResult &res);
-}
+} // Namespace SfM::io
