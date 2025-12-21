@@ -1,7 +1,6 @@
 #pragma once
 #include "../SfM.hpp"
 #include <string>
-#include <Eigen/Core>
 #include <opencv2/opencv.hpp>
 
 namespace SfM::io

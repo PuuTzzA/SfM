@@ -1,7 +1,6 @@
 #include "solve.hpp"
 #include <Eigen/SVD>
 #include <iostream>
-#include <Eigen/Dense>
 
 namespace SfM::solve
 {

@@ -10,8 +10,6 @@
 
 int main()
 {
-    std::cout << "Hello SfM!" << std::endl;
-
     std::vector<SfM::Mat4> cameraExtrinsics{
         SfM::test::calculateMatrix(90, 0, 0, SfM::Vec3(0, 0, 0)),
         SfM::test::calculateMatrix(87, 0, 5, SfM::Vec3(0.5, 0, 0.2)),
@@ -28,20 +26,35 @@ int main()
     SfM::REAL cx = width_px / 2.0f;  // 960
     SfM::REAL cy = height_px / 2.0f; // 540
 
-    SfM::Mat4 K;
-    K << fx, 0, cx, 0,
-        0, fy, cy, 0,
-        0, 0, 1, 0,
-        0, 0, 1, 0;
+    SfM::Mat3 K;
+    K << fx, 0, cx,
+        0, fy, cy,
+        0, 0, 1;
 
     std::vector<SfM::Vec3> points{};
 
-    auto tracks = SfM::test::generateRandomPoints(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(1, 1, 1), points, 1);
+    auto tracks = SfM::test::generateRandomPoints(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points);
 
-    for (auto &t : tracks)
+    { // Export Ground Truth values 
+        // Convert from Blender space to Computer Vision space bc SfM::io::exportTracksForBlender expects io
+        for (auto &extrinsic : cameraExtrinsics)
+        {
+            SfM::Mat4 blenderToCv = SfM::Mat4::Identity();
+            blenderToCv(1, 1) = -1;
+            blenderToCv(2, 2) = -1;
+
+            extrinsic *= blenderToCv;
+        }
+
+        SfM::io::exportTracksForBlender(cameraExtrinsics, points, "../../Data/test0.txt");
+    }
+
+
+
+    /* for (auto &t : tracks)
     {
         std::cout << t.observations[0].point << std::endl;
-    }
+    } */
 
     // auto tracks = SfM::io::loadTrackedPoints("../../Data/Suzanne/tracks.txt");
 

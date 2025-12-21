@@ -1,17 +1,16 @@
 #include "generate.hpp"
 #include <iostream>
 #include <math.h>
-#include <Eigen/Dense> 
 
 namespace SfM::test
 {
-    std::vector<Track> generateRandomPoints(std::vector<Mat4> &cameraPoses,
-                                            Mat4 cameraIntrinsics,
+    std::vector<Track> generateRandomPoints(std::vector<Mat4> &cameraExtrinsics,
+                                            Mat3 cameraIntrinsics,
                                             Vec3 pointsLocation,
                                             Vec3 pointsRadius,
                                             std::optional<std::reference_wrapper<std::vector<Vec3>>> points,
                                             int numPoints,
-                                            REAL detectionError)
+                                            Vec2 detectionError)
     {
         std::vector<Track> tracks;
         tracks.reserve(numPoints);
@@ -22,30 +21,36 @@ namespace SfM::test
 
         for (int i = 0; i < numPoints; i++)
         {
-            REAL rx = pointsRadius[0] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
-            REAL ry = pointsRadius[1] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
-            REAL rz = pointsRadius[2] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
+            REAL rx = static_cast<REAL>(2) * pointsRadius[0] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) - pointsRadius[0];
+            REAL ry = static_cast<REAL>(2) * pointsRadius[1] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) - pointsRadius[1];
+            REAL rz = static_cast<REAL>(2) * pointsRadius[2] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) - pointsRadius[2];
             points3d.push_back(Vec3(pointsLocation[0] + rx, pointsLocation[1] + ry, pointsLocation[2] + rz));
 
             Track track;
             track.id = i;
-            track.observations.reserve(cameraPoses.size());
+            track.observations.reserve(cameraExtrinsics.size());
             tracks.push_back(track);
         }
 
-        for (int i = 0; i < cameraPoses.size(); i++)
+        // This flips Y (Up -> Down) and Z (Look -Z -> Look +Z)
+        Mat4 blenderToCv = Mat4::Identity();
+        blenderToCv(1, 1) = -1;
+        blenderToCv(2, 2) = -1;
+
+        for (int i = 0; i < cameraExtrinsics.size(); i++)
         {
-            Mat4 poseInv = cameraPoses[i].inverse();
+            Mat4 worldToBlender = cameraExtrinsics[i].inverse();
+            Mat4 worldToCv = blenderToCv * worldToBlender;
+
+            Mat4 poseInv = cameraExtrinsics[i].inverse();
 
             for (int j = 0; j < numPoints; j++)
             {
-                Vec4 pos;
-                pos << points3d[j], static_cast<REAL>(1);
-                pos = cameraIntrinsics * poseInv * pos;
-                pos /= pos[3];
+                Vec3 pos = cameraIntrinsics * (worldToCv * points3d[j].homogeneous()).head<3>();
+                pos /= pos[2];
 
-                REAL ru = detectionError * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
-                REAL rv = detectionError * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
+                REAL ru = static_cast<REAL>(2) * detectionError[0] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) - detectionError[0];
+                REAL rv = static_cast<REAL>(2) * detectionError[1] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) - detectionError[1];
 
                 Observation obs;
                 obs.frameId = i;
