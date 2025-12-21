@@ -14,7 +14,8 @@ int main()
         SfM::test::calculateMatrix(90, 0, 0, SfM::Vec3(0, 0, 0)),
         SfM::test::calculateMatrix(87, 0, 5, SfM::Vec3(0.5, 0, 0.2)),
         SfM::test::calculateMatrix(83, 0, 10, SfM::Vec3(1.0, 0, 0.8)),
-        SfM::test::calculateMatrix(80, 0, 15, SfM::Vec3(1.5, 0, 1))};
+        SfM::test::calculateMatrix(80, 0, 15, SfM::Vec3(1.5, 0, 1)),
+        SfM::test::calculateMatrix(69, 7, 28, SfM::Vec3(4.02, 0.405, 2.82))};
 
     SfM::REAL width_px = 1920.;
     SfM::REAL height_px = 1080.;
@@ -35,7 +36,7 @@ int main()
 
     auto tracks = SfM::test::generateRandomPoints(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points);
 
-    { // Export Ground Truth values 
+    { // Export Ground Truth values
         // Convert from Blender space to Computer Vision space bc SfM::io::exportTracksForBlender expects io
         for (auto &extrinsic : cameraExtrinsics)
         {
@@ -48,8 +49,6 @@ int main()
 
         SfM::io::exportTracksForBlender(cameraExtrinsics, points, "../../Data/test0.txt");
     }
-
-
 
     /* for (auto &t : tracks)
     {

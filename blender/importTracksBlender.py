@@ -155,6 +155,22 @@ def main():
             cam_obj.keyframe_insert(data_path="location", frame=frame_num)
             cam_obj.keyframe_insert(data_path="rotation_euler", frame=frame_num)
 
+        # -----------------------------------------------------------
+        # AUTOMATIC MOTION PATH CALCULATION
+        # -----------------------------------------------------------
+        # Deselect everything first
+        bpy.ops.object.select_all(action='DESELECT')
+        
+        # Select Camera and make active
+        cam_obj.select_set(True)
+        bpy.context.view_layer.objects.active = cam_obj
+        
+        # Calculate Paths
+        # range='SCENE' uses the scene start/end we just set
+        print("Calculating Motion Path...")
+        bpy.ops.object.paths_calculate(range='MANUAL')
+        # -----------------------------------------------------------
+
     # 5. Create Point Cloud
     if point_coords:
         print(f"Creating Point Cloud ({len(point_coords)} points)...")
@@ -173,6 +189,7 @@ def main():
                 print(f"WARNING: Node group '{node_group_name}' not found.")
                 print("         Please create a Geometry Node group named 'points' for rendering.")
 
+    bpy.ops.object.select_all(action='DESELECT')
     print("Import Finished Successfully.")
 
 if __name__ == "__main__":
