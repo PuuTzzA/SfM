@@ -2,17 +2,50 @@
 #include "submodules/io/file.hpp"
 #include "submodules/solve/solve.hpp"
 #include "submodules/io/blender.hpp"
+#include "submodules/test/generate.hpp"
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
+#include <optional>
 
 int main()
 {
     std::cout << "Hello SfM!" << std::endl;
 
-    auto tracks = SfM::io::loadTrackedPoints("../../Data/Suzanne/tracks.txt");
+    std::vector<SfM::Mat4> cameraExtrinsics{
+        SfM::test::calculateMatrix(90, 0, 0, SfM::Vec3(0, 0, 0)),
+        SfM::test::calculateMatrix(87, 0, 5, SfM::Vec3(0.5, 0, 0.2)),
+        SfM::test::calculateMatrix(83, 0, 10, SfM::Vec3(1.0, 0, 0.8)),
+        SfM::test::calculateMatrix(80, 0, 15, SfM::Vec3(1.5, 0, 1))};
 
-    SfM::io::printForBlender(SfM::solve::eightPointAlgorithm(tracks));
+    SfM::REAL width_px = 1920.;
+    SfM::REAL height_px = 1080.;
+    SfM::REAL f_mm = 50.;
+    SfM::REAL sensor_mm = 36.f;
+
+    SfM::REAL fx = f_mm * width_px / sensor_mm; // focal length in pixel
+    SfM::REAL fy = fx;
+    SfM::REAL cx = width_px / 2.0f;  // 960
+    SfM::REAL cy = height_px / 2.0f; // 540
+
+    SfM::Mat4 K;
+    K << fx, 0, cx, 0,
+        0, fy, cy, 0,
+        0, 0, 1, 0,
+        0, 0, 1, 0;
+
+    std::vector<SfM::Vec3> points{};
+
+    auto tracks = SfM::test::generateRandomPoints(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(1, 1, 1), points, 1);
+
+    for (auto &t : tracks)
+    {
+        std::cout << t.observations[0].point << std::endl;
+    }
+
+    // auto tracks = SfM::io::loadTrackedPoints("../../Data/Suzanne/tracks.txt");
+
+    // SfM::io::printForBlender(SfM::solve::eightPointAlgorithm(tracks));
 
     // SfM::File::drawPointsOnImage("../../Data/Suzanne/susanne_0001.png", "ouput.png", tracks[0]);
 

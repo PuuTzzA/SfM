@@ -1,0 +1,35 @@
+#include "../SfM.hpp"
+#include <optional>
+
+namespace SfM::test
+{
+    /**
+     * @brief Generates random points and returns the corresponding Tracks
+     *
+     * @param cameraPoses Vector of camera extrinsics
+     * @param cameraIntrinsics Matrix of camera intrinsics
+     * @param pointsLocation Average position around which points are distributed
+     * @param pointsRadius Maximum absolute distance in x, y, z of the points to the pointsLocation
+     * @param points out 3D location of the generated points, as a ground truth value
+     * @param numPoints Number of generated points
+     * @param detectionError Random Jiggle that is added to the observations (simulates non-perfect camera/keypoint detection)
+     * @return Vector of Tracks from the specified camera poses
+     */
+    std::vector<Track> generateRandomPoints(std::vector<Mat4> &cameraPoses,
+                                            Mat4 cameraIntrinsics,
+                                            Vec3 pointsLocation,
+                                            Vec3 pointsRadius,
+                                            std::optional<std::reference_wrapper<std::vector<Vec3>>> points = std::nullopt,
+                                            int numPoints = 20,
+                                            REAL detectionError = 0);
+
+    /**
+     * @brief Calculates the homeogeneous transformation matrix Rot_x @ Rot_y @ Rot_z + translation
+     *
+     * @param rotX Rotation around the x-axis in degrees
+     * @param rotY Rotation around the y-axis in degrees
+     * @param rotZ Rotation around the z-axis in degrees
+     * @param translation translation
+     */
+    Mat4 calculateMatrix(REAL rotX, REAL rotY, REAL rotZ, Vec3 translation);
+} // Namespace SfM::test

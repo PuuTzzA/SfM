@@ -9,6 +9,7 @@ add_executable(SfM
     submodules/io/file.cpp
     submodules/io/blender.cpp
     submodules/solve/solve.cpp
+    submodules/test/generate.cpp
     # add more source files here
 )
 
