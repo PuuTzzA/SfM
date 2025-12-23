@@ -27,7 +27,7 @@ namespace SfM
 
     /**
      * @brief A Track a track represents one physical 3D point, e.g.:
-     * 
+     *
      * Track #42:
      *  frame 0 → (120.3, 85.1)
      *  frame 1 → (118.9, 84.7)
@@ -39,9 +39,18 @@ namespace SfM
         std::vector<Observation> observations; // all frames where it exists
     };
 
+    /**
+     * @brief Final recostructed scene with camera extrinsics and reconstructed 3d points
+     */
     struct SfMResult
     {
-        Mat4 pose;                // Pose of Camera 2
-        std::vector<Vec3> points; // Reconstructed 3D points
+        std::vector<Mat4> extrinsics; // Camera extrinsics
+        std::vector<Vec3> points;     // Reconstructed 3D points
+    };
+
+    struct EightPointResult
+    {
+        Mat4 pose;                // Pose of camera 2
+        std::vector<Vec3> points; // Reconstructed 3d points
     };
 } // Namespace SfM

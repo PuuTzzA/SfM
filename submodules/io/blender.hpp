@@ -14,6 +14,4 @@ namespace SfM::io
      * @param path String to output path
      */
     void exportTracksForBlender(std::vector<Mat4> &cameraExtrinsics, std::vector<Vec3> &points, std::string path);
-
-    void printForBlender(const SfMResult &res);
 } // Namespace SfM::io

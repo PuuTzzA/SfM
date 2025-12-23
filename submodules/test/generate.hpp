@@ -23,14 +23,4 @@ namespace SfM::test
                                             std::optional<std::reference_wrapper<std::vector<Vec3>>> points = std::nullopt,
                                             int numPoints = 20,
                                             Vec2 detectionError = Vec2(0, 0));
-
-    /**
-     * @brief Calculates the homeogeneous transformation matrix Rot_x @ Rot_y @ Rot_z + translation
-     *
-     * @param rotX Rotation around the x-axis in degrees
-     * @param rotY Rotation around the y-axis in degrees
-     * @param rotZ Rotation around the z-axis in degrees
-     * @param translation translation
-     */
-    Mat4 calculateMatrix(REAL rotX, REAL rotY, REAL rotZ, Vec3 translation);
 } // Namespace SfM::test
