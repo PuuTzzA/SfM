@@ -12,7 +12,7 @@ namespace SfM::solve
      * 
      * @return Camera extrinsics and 3d locations of the keypoints
      */
-    SfMResult eightPointAlgorithm(const std::vector<Track> &tracks, Mat3 K, const int numFrames);
+    SfMResult eightPointAlgorithm(std::vector<Track> &tracks, Mat3 K, const int numFrames);
 
     /**
      * @brief Calculates the view matrix and 3d positions between two frames

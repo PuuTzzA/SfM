@@ -23,13 +23,17 @@ namespace SfM
      */
     struct Observation
     {
-        int frameId; // which image/frame
+        int frameId; // Frame id
         Vec2 point;  // 2D measurement in that frame
     };
 
     /**
-     * @brief A Track a track represents one physical 3D point, e.g.:
+     * @brief A Track a track represents one physical 3D point
      *
+     * @param id Unique id for the 3d point
+     * @param observations Vector of Observation, all frames where the 3d point is seen (Sorted by frameId)
+     *
+     * e.g.: 
      * Track #42:
      *  frame 0 → (120.3, 85.1)
      *  frame 1 → (118.9, 84.7)
@@ -38,7 +42,8 @@ namespace SfM
     struct Track
     {
         int id;                                // stable identity
-        std::vector<Observation> observations; // all frames where it exists
+        int lastIndex;                         // helper variable to find matches faster
+        std::vector<Observation> observations; // sorted by frame Id
     };
 
     /**

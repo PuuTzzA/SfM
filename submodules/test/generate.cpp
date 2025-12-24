@@ -51,7 +51,11 @@ namespace SfM::test
                 Observation obs;
                 obs.frameId = i;
                 obs.point = Vec2(pos[0] + ru, pos[1] + rv);
-                tracks[j].observations.push_back(obs);
+
+                if (static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) < 0.5)
+                {
+                    tracks[j].observations.push_back(obs);
+                }
             }
         }
 
