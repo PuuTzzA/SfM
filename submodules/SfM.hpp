@@ -28,12 +28,21 @@ namespace SfM
     };
 
     /**
+     * @brief An approximation represents one 3d point (over multiple frames)
+     */
+    struct Approximation
+    {
+        int trackId; // Track id
+        Vec3 point;  // 3d approximation of that point
+    };
+
+    /**
      * @brief A Track a track represents one physical 3D point
      *
      * @param id Unique id for the 3d point
      * @param observations Vector of Observation, all frames where the 3d point is seen (Sorted by frameId)
      *
-     * e.g.: 
+     * e.g.:
      * Track #42:
      *  frame 0 → (120.3, 85.1)
      *  frame 1 → (118.9, 84.7)

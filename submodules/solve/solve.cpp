@@ -2,6 +2,7 @@
 #include "../util/util.hpp"
 #include <Eigen/SVD>
 #include <iostream>
+#include <unordered_set>
 
 namespace SfM::solve
 {
@@ -66,16 +67,20 @@ namespace SfM::solve
 
         std::vector<std::tuple<int, int>> shared123indices;
 
-        shared12points1.reserve(numFrames);
-        shared12points2.reserve(numFrames);
+        std::vector<int> trackIndices;
+        std::unordered_set<int> foundTracks;
 
-        shared23points2.reserve(numFrames);
-        shared23points3.reserve(numFrames);
+        shared12points1.reserve(tracks.size());
+        shared12points2.reserve(tracks.size());
 
-        shared123indices.reserve(numFrames);
+        shared23points2.reserve(tracks.size());
+        shared23points3.reserve(tracks.size());
 
-        Mat4 startTransform = SfM::util::calculateTransformationMatrix(90, 0, 0, SfM::Vec3(0, 0, 0));
-        Mat4 accumulatedPose = startTransform;
+        shared123indices.reserve(tracks.size());
+
+        trackIndices.reserve(tracks.size());
+
+        Mat4 accumulatedPose = SfM::util::calculateTransformationMatrix(90, 0, 0, SfM::Vec3(0, 0, 0)); // Start Transform
         SfMResult result;
 
         EightPointResult frame12;
@@ -93,18 +98,20 @@ namespace SfM::solve
             {
                 shared23points2.push_back(normalizePoints(o1, K_inv)); // use 23 here because it is the "last" for the triple -1, 0, 1 and in the loop we set 23 to 12
                 shared23points3.push_back(normalizePoints(o2, K_inv));
+                trackIndices.push_back(t.id);
             };
         }
 
         frame23 = eightPointAlgorithm(shared23points2, shared23points3);
 
+        for (int j = 0; j < frame23.points.size(); j++)
+        {
+            result.points.push_back((util::blendCvMat() * accumulatedPose * frame23.points[j].homogeneous()).head<3>());
+            foundTracks.insert(trackIndices[j]);
+        }
+
         result.extrinsics.push_back(accumulatedPose);
         result.extrinsics.push_back(accumulatedPose *= frame23.pose.inverse());
-
-        for (auto &point : frame23.points)
-        {
-            result.points.push_back((startTransform * util::blendCvMat() * point.homogeneous()).head<3>());
-        }
 
         // Add all the remaining frames one by one
         REAL scaleFactor = static_cast<REAL>(1);
@@ -117,7 +124,9 @@ namespace SfM::solve
             shared23points2.clear();
             shared23points3.clear();
             shared123indices.clear();
+            trackIndices.clear();
 
+            // Find tracks with correspondences over the frames
             int idxInFrame12 = 0;
             for (Track &t : tracks)
             {
@@ -132,6 +141,7 @@ namespace SfM::solve
                     inFrame23 = true;
                     shared23points2.push_back(normalizePoints(o2, K_inv));
                     shared23points3.push_back(normalizePoints(o3, K_inv));
+                    trackIndices.push_back(t.id);
                 }
 
                 if (inFrame12 && inFrame23)
@@ -145,10 +155,11 @@ namespace SfM::solve
                 }
             }
 
+            // Calculate new pose and points
             frame23 = eightPointAlgorithm(shared23points2, shared23points3);
 
+            // Calculate scale between previous frame and current frame
             std::vector<REAL> ratios;
-
             for (int j = 0; j < shared123indices.size(); j++)
             {
                 Vec3 match12Cam1 = frame12.points[std::get<0>(shared123indices[j])];
@@ -166,21 +177,22 @@ namespace SfM::solve
             }
 
             scaleFactor *= getMedian(ratios);
+            std::cout << "Matching Frame" << i - 1 << i << " and Frame" << i << i + 1 << ", Accumulated Scale: " << scaleFactor << ", shard point length: " << shared123indices.size() << std::endl;
 
-            std::cout << "Matching Frame" << i - 1 << i << " and Frame" << i << i + 1 << ", Calculated Relative Scale: " << scaleFactor << std::endl;
-            std::cout << "shared point length: " << shared123indices.size() << std::endl;
-
-            // frame23.pose.block<3, 1>(0, 3) *= scaleFactor;
-
+            // Add new pose and points to result
             Mat4 viewMat = frame23.pose;
             viewMat.block<3, 1>(0, 3) *= scaleFactor;
 
-            result.extrinsics.push_back(accumulatedPose *= viewMat.inverse());
-
-            /* for (auto &point : frame12.points)
+            for (int j = 0; j < frame23.points.size(); j++)
             {
-                point = (startTransform * util::blendCvMat() * point.homogeneous()).head<3>();
-            } */
+                if (foundTracks.find(trackIndices[j]) == foundTracks.end()) // Track not jet in the found tracks
+                {
+                    result.points.push_back((util::blendCvMat() * accumulatedPose * (scaleFactor * frame23.points[j]).homogeneous()).head<3>()); // use accumulated pose for last frame bc points are in Cam2 Space
+                    foundTracks.insert(trackIndices[j]);
+                }
+            }
+
+            result.extrinsics.push_back(accumulatedPose *= viewMat.inverse());
         }
 
         return result;
@@ -188,6 +200,11 @@ namespace SfM::solve
 
     EightPointResult eightPointAlgorithm(const std::vector<Vec2> &points1, const std::vector<Vec2> &points2)
     {
+        if (points1.size() < 8)
+        {
+            throw std::invalid_argument("There have to be at least 8 pair-to-pair-correspondences (was: " + std::to_string(points1.size()) + ") to approximate a pose.");
+        }
+
         // row major indexing: matrix(row, column)
         const int n = points1.size();
         MatX A(n, 9);
