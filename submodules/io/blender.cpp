@@ -24,7 +24,7 @@ namespace SfM::io
         for (const auto &pose : cameraExtrinsics)
         {
             // Apply conversion: NewPose = OldPose * T_flip
-            SfM::Mat4 blenderPose = util::cvToBlender(pose);
+            // SfM::Mat4 blenderPose = util::cvToBlender(pose);
             out << pose.format(CleanFmt) << "\n";
         }
 

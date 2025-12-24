@@ -36,7 +36,7 @@ namespace SfM::test
         for (int i = 0; i < cameraExtrinsics.size(); i++)
         {
             Mat4 worldToBlender = cameraExtrinsics[i].inverse();
-            Mat4 worldToCv = util::blenderToCv(worldToBlender);
+            Mat4 worldToCv = worldToBlender * util::blendCvMat();
 
             Mat4 poseInv = cameraExtrinsics[i].inverse();
 

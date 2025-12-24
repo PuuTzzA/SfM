@@ -47,7 +47,7 @@ int main()
         SfM::io::exportTracksForBlender(cameraExtrinsics, points, "../../Data/test0.txt");
     }
 
-    auto result = SfM::solve::eightPointAlgorithm(tracks, K);
+    auto result = SfM::solve::eightPointAlgorithm(tracks, K, cameraExtrinsics.size());
 
     SfM::io::exportTracksForBlender(result.extrinsics, result.points, "../../Data/test0_8point.txt");
 

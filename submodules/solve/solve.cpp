@@ -23,40 +23,172 @@ namespace SfM::solve
         return Vec2(ray[0], ray[1]);
     }
 
-    SfMResult eightPointAlgorithm(const std::vector<Track> &tracks, Mat3 K)
+    bool getObservationOrNull(const Track &track, int frame, Vec2 &outObservation)
     {
-        std::vector<Vec2> points1;
-        std::vector<Vec2> points2;
+        for (const auto &observation : track.observations)
+        {
+            if (observation.frameId == frame)
+            {
+                outObservation = observation.point;
+                return true;
+            }
+        }
+        return false;
+    }
 
+    REAL getMedian(std::vector<REAL> &v)
+    {
+        size_t n = v.size();
+        if (n == 0)
+            return 1.0;
+        std::nth_element(v.begin(), v.begin() + n / 2, v.end());
+        return v[n / 2];
+    }
+
+    SfMResult eightPointAlgorithm(const std::vector<Track> &tracks, Mat3 K, const int numFrames)
+    {
         Mat3 K_inv = K.inverse();
+
+        std::vector<Vec2> shared12points1;
+        std::vector<Vec2> shared12points2;
+
+        std::vector<Vec2> shared23points2;
+        std::vector<Vec2> shared23points3;
+
+        std::vector<int> shared123index12;
+        std::vector<int> shared123index23;
+
+        shared12points1.reserve(numFrames);
+        shared12points2.reserve(numFrames);
+
+        shared23points2.reserve(numFrames);
+        shared23points3.reserve(numFrames);
+
+        shared123index12.reserve(numFrames);
+        shared123index23.reserve(numFrames);
+
+        Mat4 startTransform = SfM::util::calculateTransformationMatrix(90, 0, 0, SfM::Vec3(0, 0, 0));
+        Mat4 accumulatedPose = startTransform;
+        std::vector<Vec3> allPoints;
+        SfMResult result;
+
+        for (int i = 0; i < 1; i++)
+        {
+            shared12points1.clear();
+            shared12points2.clear();
+            shared23points2.clear();
+            shared23points3.clear();
+            shared123index12.clear();
+            shared123index23.clear();
+
+            for (const Track &t : tracks)
+            {
+                Vec2 o1;
+                Vec2 o2;
+                Vec2 o3;
+
+                if (getObservationOrNull(t, i, o1) && getObservationOrNull(t, i + 1, o2))
+                {
+                    shared12points1.push_back(normalizePoints(o1, K_inv));
+                    shared12points2.push_back(normalizePoints(o2, K_inv));
+                };
+
+                if (getObservationOrNull(t, i + 1, o2), getObservationOrNull(t, i + 2, o3))
+                {
+                    shared23points2.push_back(normalizePoints(o2, K_inv));
+                    shared23points3.push_back(normalizePoints(o3, K_inv));
+
+                    if (getObservationOrNull(t, i, o1))
+                    {
+                        // all three camera frames share this track
+                        shared123index12.push_back(shared12points1.size() - 1);
+                        shared123index23.push_back(shared23points2.size() - 1);
+                    }
+                }
+            }
+
+            EightPointResult frame12 = eightPointAlgorithm(shared12points1, shared12points2);
+            EightPointResult frame23 = eightPointAlgorithm(shared23points2, shared23points3);
+
+            std::vector<REAL> ratios;
+
+            for (int j = 0; j < shared123index12.size(); j++)
+            {
+                Vec3 match12Cam1 = frame12.points[shared123index12[j]];
+                Vec3 match23Cam2 = frame23.points[shared123index23[j]];
+
+                Vec3 match12Cam2 = (frame12.pose * match12Cam1.homogeneous()).head<3>();
+
+                REAL dist12 = match12Cam2.norm();
+                REAL dist23 = match23Cam2.norm();
+
+                if (dist23 > EPSILON)
+                {
+                    ratios.push_back(dist12 / dist23);
+                }
+            }
+
+            REAL scaleFactor = getMedian(ratios);
+
+            std::cout << "Matching Frame" << i << i + 1 << " and Frame" << i + 1 << i + 2 << ", Calculated Relative Scale: " << scaleFactor << std::endl;
+
+            frame23.pose.block<3, 1>(0, 3) *= scaleFactor;
+
+            result.extrinsics.push_back(accumulatedPose);
+            result.extrinsics.push_back(accumulatedPose *= frame12.pose.inverse());
+            result.extrinsics.push_back(accumulatedPose *= frame23.pose.inverse());
+
+            for (auto &point : frame12.points)
+            {
+                point = (startTransform * util::blendCvMat() * point.homogeneous()).head<3>();
+            }
+
+            result.points = frame12.points;
+        }
+
+        return result;
+
+        /* std::vector<Vec2> points4;
 
         for (const auto &t : tracks)
         {
             Vec2 p1 = normalizePoints(t.observations[0].point, K_inv);
             Vec2 p2 = normalizePoints(t.observations[1].point, K_inv);
 
-            points1.push_back(p1);
-            points2.push_back(p2);
+            Vec2 p3 = normalizePoints(t.observations[2].point, K_inv);
+            Vec2 p4 = normalizePoints(t.observations[3].point, K_inv);
+
+            shared12points1.push_back(p1);
+            pointsTwoThree.push_back(p2);
+            pointsOneTwoThree.push_back(p3);
+            points4.push_back(p4);
         }
 
-        EightPointResult frame12 = eightPointAlgorithm(points1, points2);
+        EightPointResult frame12 = eightPointAlgorithm(shared12points1, pointsTwoThree);
+        EightPointResult frame23 = eightPointAlgorithm(pointsTwoThree, pointsOneTwoThree);
+        EightPointResult frame34 = eightPointAlgorithm(pointsOneTwoThree, points4);
 
-        Mat4 start = util::blenderToCv(util::calculateTransformationMatrix(90, 0, 0, SfM::Vec3(0, 0, 0)));
-        Mat4 start2 = util::blenderToCv(util::calculateTransformationMatrix(90, 0, 0, SfM::Vec3(0, 0, 0)));
-        //start = Mat4::Identity();
+        Mat4 blendCvMat = util::blendCvMat();
+
+        Mat4 startTransform = SfM::util::calculateTransformationMatrix(90, 0, 0, SfM::Vec3(0, 0, 0));
 
         SfMResult result;
-        result.extrinsics.push_back(start.inverse());
-        result.extrinsics.push_back(start2.inverse() * frame12.pose.inverse());
+
+        Mat4 currentCam = startTransform;
+        result.extrinsics.push_back(currentCam);
+        currentCam = currentCam * frame12.pose.inverse();
+        result.extrinsics.push_back(currentCam);
+        result.extrinsics.push_back(currentCam *= frame23.pose.inverse());
+        result.extrinsics.push_back(currentCam *= frame34.pose.inverse());
 
         for (auto &point : frame12.points)
         {
-            point = (start * point.homogeneous()).head<3>();
+            point = (startTransform * blendCvMat * point.homogeneous()).head<3>();
         }
 
         result.points = frame12.points;
 
-        return result;
+        return result; */
     }
 
     EightPointResult eightPointAlgorithm(const std::vector<Vec2> &points1, const std::vector<Vec2> &points2)
