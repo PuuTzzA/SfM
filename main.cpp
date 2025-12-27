@@ -8,6 +8,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <optional>
+#include <chrono>
 
 int main()
 {
@@ -34,8 +35,9 @@ int main()
         0, 0, 1;
 
     std::vector<SfM::Vec3> points{};
+    int numPoints = 20;
 
-    auto tracks = SfM::test::generateRandomPoints(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points);
+    auto tracks = SfM::test::generateRandomPointsFrames(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints);
 
     { // Export Ground Truth values
         // Convert from Blender space to Computer Vision space bc SfM::io::exportTracksForBlender expects io
@@ -56,33 +58,24 @@ int main()
         }
     } */
 
-    auto result = SfM::solve::eightPointAlgorithm(tracks, K, cameraExtrinsics.size());
-
-    SfM::io::exportTracksForBlender(result.extrinsics, result.points, "../../Data/test0_8point.txt");
-
-    /* for (auto &t : tracks)
+    /* for (auto f : tracks)
     {
-        std::cout << t.observations[0].point << std::endl;
-    } */
-
-    // auto tracks = SfM::io::loadTrackedPoints("../../Data/Suzanne/tracks.txt");
-
-    // SfM::io::printForBlender(SfM::solve::eightPointAlgorithm(tracks));
-
-    // SfM::File::drawPointsOnImage("../../Data/Suzanne/susanne_0001.png", "ouput.png", tracks[0]);
-
-    // std::vector<std::string> paths({"../../Data/Suzanne/susanne_0001.png", "../../Data/Suzanne/susanne_0002.png", "../../Data/Suzanne/susanne_0003.png", "../../Data/Suzanne/susanne_0004.png"});
-    // SfM::File::drawCollageWithTracks(paths, tracks, 0, 1, "collage.png");
-
-    /* for (auto &point : tracks)
-    {
-        std::cout << "pointlolol" << std::endl;
-
-        for (auto &frame : point)
+        std::cout << "frame: " << f.frameId << std::endl;
+        for (auto &k : f.keypoints)
         {
-            std::cout << frame[0] << ", " << frame[1] << std::endl;
+            std::cout << "keypoint: " << k.trackId << std::endl;
         }
     } */
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    auto result = SfM::solve::eightPointAlgorithm(tracks, K, numPoints);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
+
+    // SfM::io::exportTracksForBlender(result.extrinsics, result.points, "../../Data/test0_8point.txt");
 
     /* cv::Mat img = cv::imread("../../Data/Suzanne/susanne_0001.png");
 

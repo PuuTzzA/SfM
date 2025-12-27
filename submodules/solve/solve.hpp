@@ -5,11 +5,22 @@ namespace SfM::solve
 {
     /**
      * @brief Solves for the camera extrinsics and 3d positions of the keypoints with the 8 point algorithm.
-     * 
+     *
+     * @param frames Vector of frames with keypoints
+     * @param K Camera intrinsics
+     * @param numTotKeypoints Total Number of unique tracks (3d points)
+     *
+     * @return Camera extrinsics and 3d locations of the keypoints
+     */
+    SfMResult eightPointAlgorithm(std::vector<Frame> &frames, Mat3 K, const int numTotKeypoints);
+
+    /**
+     * @brief Solves for the camera extrinsics and 3d positions of the keypoints with the 8 point algorithm.
+     *
      * @param tracks Vector of tracked keypoints
      * @param K Camera intrinsics
      * @param numFrames Number of images in the sequence
-     * 
+     *
      * @return Camera extrinsics and 3d locations of the keypoints
      */
     SfMResult eightPointAlgorithm(std::vector<Track> &tracks, Mat3 K, const int numFrames);

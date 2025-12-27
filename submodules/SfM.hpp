@@ -19,6 +19,31 @@ namespace SfM
     constexpr REAL EPSILON = static_cast<REAL>(1e-6);
 
     /**
+     * @brief A 2d observation of a keypoint in a frame
+     */
+    struct Keypoint
+    {
+        enum Status
+        {
+            UNINITIALIZED = -1,
+            NOT_FOUND = -2
+        };
+
+        Vec2 point;                           // 2D measurement of the point
+        int trackId;                          // Unique Id per Frame
+        int indexInLastFrame = UNINITIALIZED; // Matching Keypoint in the previous Frame
+    };
+
+    /**
+     * @brief A frame from the camera with an unique id and a bunch of keyframes. For the "horizontal" approach, one frame one data object
+     */
+    struct Frame
+    {
+        std::vector<Keypoint> keypoints; // Vector of Keypoints
+        int frameId;                     // Unique Id per Frame
+    };
+
+    /**
      * @brief An observation represents one 2D measurement
      */
     struct Observation
@@ -37,7 +62,7 @@ namespace SfM
     };
 
     /**
-     * @brief A Track a track represents one physical 3D point
+     * @brief A Track a track represents one physical 3D point. For the "vertical" approach, one 3d point one data object, but one frame = many 3d points = many data objects
      *
      * @param id Unique id for the 3d point
      * @param observations Vector of Observation, all frames where the 3d point is seen (Sorted by frameId)

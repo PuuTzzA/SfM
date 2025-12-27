@@ -9,13 +9,6 @@ namespace SfM::solve
     /**
      * @brief Transforms a point from pixel coordinates to a range ~ -1...1
      */
-    /* inline Vec2 normalizePointsOld(Vec2 point, REAL widht, REAL height)
-    {
-        REAL max = std::max(widht, height);
-        point[0] = (2 * point[0] - widht) / max;
-        point[1] = (2 * point[1] - height) / max;
-        return point;
-    } */
     inline Vec2 normalizePoints(Vec2 pixel, Mat3 &K_inv)
     {
         Vec3 p_homog;
@@ -53,6 +46,202 @@ namespace SfM::solve
             return 1.0;
         std::nth_element(v.begin(), v.begin() + n / 2, v.end());
         return v[n / 2];
+    }
+
+    SfMResult eightPointAlgorithm(std::vector<Frame> &frames, Mat3 K, const int numTotKeypoints)
+    {
+        Mat3 K_inv = K.inverse();
+
+        std::vector<Vec2> shared12points1;
+        std::vector<Vec2> shared12points2;
+
+        std::vector<Vec2> shared23points2;
+        std::vector<Vec2> shared23points3;
+
+        std::vector<int> trackIndices12;
+        std::vector<int> trackIndices23;
+
+        shared12points1.reserve(numTotKeypoints);
+        shared12points2.reserve(numTotKeypoints);
+
+        shared23points2.reserve(numTotKeypoints);
+        shared23points3.reserve(numTotKeypoints);
+
+        trackIndices12.reserve(numTotKeypoints);
+        trackIndices23.reserve(numTotKeypoints);
+
+        Mat4 accumulatedPose = SfM::util::calculateTransformationMatrix(90, 0, 0, SfM::Vec3(0, 0, 0)); // Start Transform
+        SfMResult result;
+        result.points.resize(numTotKeypoints, Vec3::Zero());
+
+        EightPointResult frame12;
+        EightPointResult frame23;
+
+        // First iteration outside the loop, then in the loop always add one more frame
+        if (frames.size() < 2)
+        {
+            throw std::invalid_argument("Frames has to be at least of size 2 to solve for camera motion.");
+        }
+        int j = 0; // dont reset j every iteration because the keypoints are sorted by trackId
+        for (auto &keypoint : frames[1].keypoints)
+        {
+            Vec2 o1;
+            Vec2 o2;
+
+            // Find the matching keypoint in the prevous frame
+            if (keypoint.indexInLastFrame == Keypoint::UNINITIALIZED)
+            {
+                while (frames[0].keypoints[j].trackId <= keypoint.trackId && j < frames[0].keypoints.size())
+                {
+                    if (frames[0].keypoints[j].trackId == keypoint.trackId)
+                    {
+                        keypoint.indexInLastFrame = j;
+                        j++;
+                        break;
+                    }
+                    j++;
+                }
+                if (keypoint.indexInLastFrame == Keypoint::UNINITIALIZED)
+                {
+                    keypoint.indexInLastFrame = Keypoint::NOT_FOUND;
+                }
+            }
+
+            if (keypoint.indexInLastFrame == Keypoint::NOT_FOUND)
+            {
+                continue;
+            }
+            o1 = frames[0].keypoints[keypoint.indexInLastFrame].point;
+            o2 = keypoint.point;
+            shared23points2.push_back(normalizePoints(o1, K_inv)); // use 23 here because it is the "last" for the triple -1, 0, 1 and in the loop we set 23 to 12
+            shared23points3.push_back(normalizePoints(o2, K_inv));
+            trackIndices23.push_back(keypoint.trackId);
+        }
+
+        frame23 = eightPointAlgorithm(shared23points2, shared23points3);
+
+        for (int j = 0; j < frame23.points.size(); j++)
+        {
+            if (result.points[trackIndices23[j]] != Vec3::Zero())
+            {
+                result.points[trackIndices23[j]] = (util::blendCvMat() * accumulatedPose * frame23.points[j].homogeneous()).head<3>();
+            }
+        }
+
+        result.extrinsics.push_back(accumulatedPose);
+        result.extrinsics.push_back(accumulatedPose *= frame23.pose.inverse());
+
+        // Add all the remaining frames one by one
+        REAL scaleFactor = static_cast<REAL>(1);
+        for (int i = 2, max = frames.size(); i < max; i++)
+        {
+            shared12points1 = std::move(shared23points2);
+            shared12points2 = std::move(shared23points3);
+            trackIndices12 = std::move(trackIndices23);
+            frame12 = std::move(frame23);
+
+            shared23points2.clear();
+            shared23points3.clear();
+            trackIndices23.clear();
+
+            int j = 0;
+            int idxInFrame12 = 0;
+            for (auto &keypoint : frames[i].keypoints)
+            {
+                Vec2 o1;
+                Vec2 o2;
+
+                // Find the matching keypoint in the prevous frame
+                if (keypoint.indexInLastFrame == Keypoint::UNINITIALIZED)
+                {
+                    while (frames[i - 1].keypoints[j].trackId <= keypoint.trackId && j < frames[i - 1].keypoints.size())
+                    {
+                        if (frames[i - 1].keypoints[j].trackId == keypoint.trackId)
+                        {
+                            keypoint.indexInLastFrame = j;
+                            j++;
+                            break;
+                        }
+                        j++;
+                    }
+                    if (keypoint.indexInLastFrame == Keypoint::UNINITIALIZED)
+                    {
+                        keypoint.indexInLastFrame = Keypoint::NOT_FOUND;
+                    }
+                }
+
+                // Fill the array for the 8 point algorithm
+                if (keypoint.indexInLastFrame == Keypoint::NOT_FOUND)
+                {
+                    continue;
+                }
+
+                const auto &matchInLastFrame = frames[i - 1].keypoints[keypoint.indexInLastFrame];
+                o1 = matchInLastFrame.point;
+                o2 = keypoint.point;
+                shared23points2.push_back(normalizePoints(o1, K_inv)); // use 23 here because it is the "last" for the triple -1, 0, 1 and in the loop we set 23 to 12
+                shared23points3.push_back(normalizePoints(o2, K_inv));
+                trackIndices23.push_back(keypoint.trackId);
+            }
+
+            // Calculate new pose and points
+            frame23 = eightPointAlgorithm(shared23points2, shared23points3);
+
+            // Calculate scale between previous frame and current frame
+            std::vector<REAL> ratios;
+            int idx12 = 0;
+            for (int idx23 = 0; idx23 < trackIndices23.size(); idx23++)
+            {
+                bool inAllThree = false;
+                while (trackIndices12[idx12] <= trackIndices23[idx23] && idx12 < trackIndices12.size())
+                {
+                    if (trackIndices12[idx12] == trackIndices23[idx23])
+                    {
+                        inAllThree = true;
+                        idx12++;
+                        break;
+                    }
+                    idx12++;
+                }
+
+                if (!inAllThree)
+                {
+                    continue;
+                }
+
+                Vec3 match12Cam1 = frame12.points[trackIndices12[idx12 - 1]]; // -1 bc idx12 is always incremented
+                Vec3 match23Cam2 = frame23.points[trackIndices23[idx23]];
+
+                Vec3 match12Cam2 = (frame12.pose * match12Cam1.homogeneous()).head<3>();
+
+                REAL dist12 = match12Cam2.norm();
+                REAL dist23 = match23Cam2.norm();
+
+                if (dist23 > EPSILON)
+                {
+                    ratios.push_back(dist12 / dist23);
+                }
+            }
+
+            scaleFactor *= getMedian(ratios);
+            std::cout << "Matching Frame" << i - 1 << i << " and Frame" << i << i + 1 << ", Accumulated Scale: " << scaleFactor << std::endl;
+
+            // Add new pose and points to result
+            Mat4 viewMat = frame23.pose;
+            viewMat.block<3, 1>(0, 3) *= scaleFactor;
+
+            for (int j = 0; j < frame23.points.size(); j++)
+            {
+                if (result.points[trackIndices23[j]] != Vec3::Zero())
+                {
+                    result.points[trackIndices23[j]] = (util::blendCvMat() * accumulatedPose * frame23.points[j].homogeneous()).head<3>();
+                }
+            }
+
+            result.extrinsics.push_back(accumulatedPose *= viewMat.inverse());
+        }
+
+        return result;
     }
 
     SfMResult eightPointAlgorithm(std::vector<Track> &tracks, Mat3 K, const int numFrames)
