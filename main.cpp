@@ -69,13 +69,14 @@ int main()
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    auto result = SfM::solve::eightPointAlgorithm(tracks, K, numPoints);
+    //auto result = SfM::solve::eightPointAlgorithm(tracks, K, numPoints);
+    auto result = SfM::solve::bundleAdjustment(tracks, K, numPoints);
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
 
-    // SfM::io::exportTracksForBlender(result.extrinsics, result.points, "../../Data/test0_8point.txt");
+    SfM::io::exportTracksForBlender(result.extrinsics, result.points, "../../Data/test0_8point.txt");
 
     /* cv::Mat img = cv::imread("../../Data/Suzanne/susanne_0001.png");
 

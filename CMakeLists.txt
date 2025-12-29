@@ -8,7 +8,8 @@ add_executable(SfM
     main.cpp
     submodules/io/file.cpp
     submodules/io/blender.cpp
-    submodules/solve/solve.cpp
+    submodules/solve/bundleAdjustment.cpp
+    submodules/solve/eightPoint.cpp
     submodules/test/generate.cpp
     submodules/util/util.cpp
     # add more source files here
@@ -17,9 +18,11 @@ add_executable(SfM
 # If you need external libraries:
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Ceres REQUIRED)
 
 target_link_libraries(SfM
     PRIVATE
         ${OpenCV_LIBS}
         Eigen3::Eigen
+        Ceres::ceres
 )
