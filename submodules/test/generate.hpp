@@ -45,4 +45,11 @@ namespace SfM::test
                                                   int numPoints = 20,
                                                   Vec2 detectionError = Vec2(0, 0));
 
+    /**
+     * @brief Adds outliers (trash observations) to the frames
+     * 
+     * @param minNumOutliersPerFrame Minimum number of added outliers per frame
+     * @param maxNumOutliersPerFrame Maximum number of added outliers per frame
+     */
+    void addOutliersFrames(std::vector<Frame>& frames, int minNumOutlierPerFrame, int maxNumOutlierPerFrame);
 } // Namespace SfM::test

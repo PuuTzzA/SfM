@@ -46,7 +46,7 @@ namespace SfM::test
                 REAL ru = static_cast<REAL>(2) * detectionError[0] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) - detectionError[0];
                 REAL rv = static_cast<REAL>(2) * detectionError[1] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) - detectionError[1];
 
-                Observation obs;
+                SimpleObservation obs;
                 obs.frameId = i;
                 obs.point = Vec2(pos[0] + ru, pos[1] + rv);
 
@@ -99,13 +99,13 @@ namespace SfM::test
                 REAL ru = static_cast<REAL>(2) * detectionError[0] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) - detectionError[0];
                 REAL rv = static_cast<REAL>(2) * detectionError[1] * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) - detectionError[1];
 
-                Keypoint keypoint;
-                keypoint.trackId = j;
-                keypoint.point = Vec2(pos[0] + ru, pos[1] + rv);
+                Observation observation;
+                observation.trackId = j;
+                observation.point = Vec2(pos[0] + ru, pos[1] + rv);
 
                 if (static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) < 0.85)
                 {
-                    currentFrame.keypoints.push_back(keypoint);
+                    currentFrame.observations.push_back(observation);
                 }
             }
 

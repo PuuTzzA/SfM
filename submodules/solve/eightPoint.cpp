@@ -48,7 +48,7 @@ namespace SfM::solve
         return v[n / 2];
     }
 
-    SfMResult eightPointAlgorithm(std::vector<Frame> &frames, Mat3 K, const int numTotKeypoints)
+    SfMResult eightPointAlgorithm(std::vector<Frame> &frames, Mat3 K, const int numTotTracks)
     {
         Mat3 K_inv = K.inverse();
 
@@ -61,18 +61,18 @@ namespace SfM::solve
         std::vector<int> trackIndices12;
         std::vector<int> trackIndices23;
 
-        shared12points1.reserve(numTotKeypoints);
-        shared12points2.reserve(numTotKeypoints);
+        shared12points1.reserve(numTotTracks);
+        shared12points2.reserve(numTotTracks);
 
-        shared23points2.reserve(numTotKeypoints);
-        shared23points3.reserve(numTotKeypoints);
+        shared23points2.reserve(numTotTracks);
+        shared23points3.reserve(numTotTracks);
 
-        trackIndices12.reserve(numTotKeypoints);
-        trackIndices23.reserve(numTotKeypoints);
+        trackIndices12.reserve(numTotTracks);
+        trackIndices23.reserve(numTotTracks);
 
         Mat4 accumulatedPose = SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)); // Start Transform
         SfMResult result;
-        result.points.resize(numTotKeypoints, Vec3::Zero());
+        result.points.resize(numTotTracks, Vec3::Zero());
 
         EightPointResult frame12;
         EightPointResult frame23;
@@ -82,40 +82,40 @@ namespace SfM::solve
         {
             throw std::invalid_argument("Frames has to be at least of size 2 to solve for camera motion.");
         }
-        int j = 0; // dont reset j every iteration because the keypoints are sorted by trackId
-        for (auto &keypoint : frames[1].keypoints)
+        int j = 0; // dont reset j every iteration because the observations are sorted by trackId
+        for (auto &observation : frames[1].observations)
         {
             Vec2 o1;
             Vec2 o2;
 
-            // Find the matching keypoint in the prevous frame
-            if (keypoint.indexInLastFrame == Keypoint::UNINITIALIZED)
+            // Find the matching observation in the prevous frame
+            if (observation.indexInLastFrame == Observation::UNINITIALIZED)
             {
-                while (frames[0].keypoints[j].trackId <= keypoint.trackId && j < frames[0].keypoints.size())
+                while (frames[0].observations[j].trackId <= observation.trackId && j < frames[0].observations.size())
                 {
-                    if (frames[0].keypoints[j].trackId == keypoint.trackId)
+                    if (frames[0].observations[j].trackId == observation.trackId)
                     {
-                        keypoint.indexInLastFrame = j;
+                        observation.indexInLastFrame = j;
                         j++;
                         break;
                     }
                     j++;
                 }
-                if (keypoint.indexInLastFrame == Keypoint::UNINITIALIZED)
+                if (observation.indexInLastFrame == Observation::UNINITIALIZED)
                 {
-                    keypoint.indexInLastFrame = Keypoint::NOT_FOUND;
+                    observation.indexInLastFrame = Observation::NOT_FOUND;
                 }
             }
 
-            if (keypoint.indexInLastFrame == Keypoint::NOT_FOUND)
+            if (observation.indexInLastFrame == Observation::NOT_FOUND)
             {
                 continue;
             }
-            o1 = frames[0].keypoints[keypoint.indexInLastFrame].point;
-            o2 = keypoint.point;
+            o1 = frames[0].observations[observation.indexInLastFrame].point;
+            o2 = observation.point;
             shared23points2.push_back(normalizePoints(o1, K_inv)); // use 23 here because it is the "last" for the triple -1, 0, 1 and in the loop we set 23 to 12
             shared23points3.push_back(normalizePoints(o2, K_inv));
-            trackIndices23.push_back(keypoint.trackId);
+            trackIndices23.push_back(observation.trackId);
         }
 
         frame23 = eightPointAlgorithm(shared23points2, shared23points3);
@@ -146,42 +146,42 @@ namespace SfM::solve
 
             int j = 0;
             int idxInFrame12 = 0;
-            for (auto &keypoint : frames[i].keypoints)
+            for (auto &observation : frames[i].observations)
             {
                 Vec2 o1;
                 Vec2 o2;
 
-                // Find the matching keypoint in the prevous frame
-                if (keypoint.indexInLastFrame == Keypoint::UNINITIALIZED)
+                // Find the matching observation in the prevous frame
+                if (observation.indexInLastFrame == Observation::UNINITIALIZED)
                 {
-                    while (frames[i - 1].keypoints[j].trackId <= keypoint.trackId && j < frames[i - 1].keypoints.size())
+                    while (frames[i - 1].observations[j].trackId <= observation.trackId && j < frames[i - 1].observations.size())
                     {
-                        if (frames[i - 1].keypoints[j].trackId == keypoint.trackId)
+                        if (frames[i - 1].observations[j].trackId == observation.trackId)
                         {
-                            keypoint.indexInLastFrame = j;
+                            observation.indexInLastFrame = j;
                             j++;
                             break;
                         }
                         j++;
                     }
-                    if (keypoint.indexInLastFrame == Keypoint::UNINITIALIZED)
+                    if (observation.indexInLastFrame == Observation::UNINITIALIZED)
                     {
-                        keypoint.indexInLastFrame = Keypoint::NOT_FOUND;
+                        observation.indexInLastFrame = Observation::NOT_FOUND;
                     }
                 }
 
                 // Fill the array for the 8 point algorithm
-                if (keypoint.indexInLastFrame == Keypoint::NOT_FOUND)
+                if (observation.indexInLastFrame == Observation::NOT_FOUND)
                 {
                     continue;
                 }
 
-                const auto &matchInLastFrame = frames[i - 1].keypoints[keypoint.indexInLastFrame];
+                const auto &matchInLastFrame = frames[i - 1].observations[observation.indexInLastFrame];
                 o1 = matchInLastFrame.point;
-                o2 = keypoint.point;
+                o2 = observation.point;
                 shared23points2.push_back(normalizePoints(o1, K_inv)); // use 23 here because it is the "last" for the triple -1, 0, 1 and in the loop we set 23 to 12
                 shared23points3.push_back(normalizePoints(o2, K_inv));
-                trackIndices23.push_back(keypoint.trackId);
+                trackIndices23.push_back(observation.trackId);
             }
 
             // Calculate new pose and points

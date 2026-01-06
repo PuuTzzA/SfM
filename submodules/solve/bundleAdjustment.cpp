@@ -59,10 +59,10 @@ namespace SfM::solve
         const REAL m_weight;
     };
 
-    SfMResult bundleAdjustment(std::vector<Frame> &frames, Mat3 K, const int numTotKeypoints)
+    SfMResult bundleAdjustment(std::vector<Frame> &frames, Mat3 K, const int numTotTracks)
     {
         std::vector<Vec3> points3d;
-        points3d.resize(numTotKeypoints, Vec3(0., 0., 1.));
+        points3d.resize(numTotTracks, Vec3(0., 0., 1.));
 
         std::vector<REAL> extrinsics(frames.size() * 6, static_cast<REAL>(0)); // 3 * angle-axis, 3 * translation
 
@@ -73,7 +73,7 @@ namespace SfM::solve
         {
             REAL *extrinsicPtr = &extrinsics[i * 6];
 
-            for (const auto &point : frames[i].keypoints)
+            for (const auto &point : frames[i].observations)
             {
                 REAL *pointPtr = points3d[point.trackId].data();
                 ceres::CostFunction *costFunction = BundleAdjustmentConstraint::create(K, point.point, 1.0);

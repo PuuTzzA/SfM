@@ -19,9 +19,9 @@ namespace SfM
     constexpr REAL EPSILON = static_cast<REAL>(1e-7);
 
     /**
-     * @brief A 2d observation of a keypoint in a frame
+     * @brief An observation represents one 2D measurement
      */
-    struct Keypoint
+    struct Observation
     {
         enum Status
         {
@@ -31,22 +31,22 @@ namespace SfM
 
         Vec2 point;                           // 2D measurement of the point
         int trackId;                          // Unique Id per Frame
-        int indexInLastFrame = UNINITIALIZED; // Matching Keypoint in the previous Frame
+        int indexInLastFrame = UNINITIALIZED; // Matching Observation in the previous Frame
     };
 
     /**
-     * @brief A frame from the camera with an unique id and a bunch of keyframes. For the "horizontal" approach, one frame one data object
+     * @brief A frame from the camera with an unique id and a bunch of observations. For the "horizontal" approach, one frame one data object
      */
     struct Frame
     {
-        std::vector<Keypoint> keypoints; // Vector of Keypoints
-        int frameId;                     // Unique Id per Frame
+        std::vector<Observation> observations; // Vector of Observations
+        int frameId;                           // Unique Id per Frame
     };
 
     /**
      * @brief An observation represents one 2D measurement
      */
-    struct Observation
+    struct SimpleObservation
     {
         int frameId; // Frame id
         Vec2 point;  // 2D measurement in that frame
@@ -75,9 +75,9 @@ namespace SfM
      */
     struct Track
     {
-        int id;                                // stable identity
-        int lastIndex;                         // helper variable to find matches faster
-        std::vector<Observation> observations; // sorted by frame Id
+        int id;                                      // stable identity
+        int lastIndex;                               // helper variable to find matches faster
+        std::vector<SimpleObservation> observations; // sorted by frame Id
     };
 
     /**
