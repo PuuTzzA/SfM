@@ -70,7 +70,7 @@ namespace SfM::solve
         trackIndices12.reserve(numTotKeypoints);
         trackIndices23.reserve(numTotKeypoints);
 
-        Mat4 accumulatedPose = SfM::util::calculateTransformationMatrix(90, 0, 0, SfM::Vec3(0, 0, 0)); // Start Transform
+        Mat4 accumulatedPose = SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)); // Start Transform
         SfMResult result;
         result.points.resize(numTotKeypoints, Vec3::Zero());
 
@@ -122,7 +122,7 @@ namespace SfM::solve
 
         for (int j = 0; j < frame23.points.size(); j++)
         {
-            if (result.points[trackIndices23[j]] != Vec3::Zero())
+            if (result.points[trackIndices23[j]] == Vec3::Zero())
             {
                 result.points[trackIndices23[j]] = (util::blendCvMat() * accumulatedPose * frame23.points[j].homogeneous()).head<3>();
             }
@@ -190,6 +190,7 @@ namespace SfM::solve
             // Calculate scale between previous frame and current frame
             std::vector<REAL> ratios;
             int idx12 = 0;
+            int numInAllThree = 0;
             for (int idx23 = 0; idx23 < trackIndices23.size(); idx23++)
             {
                 bool inAllThree = false;
@@ -209,8 +210,10 @@ namespace SfM::solve
                     continue;
                 }
 
-                Vec3 match12Cam1 = frame12.points[trackIndices12[idx12 - 1]]; // -1 bc idx12 is always incremented
-                Vec3 match23Cam2 = frame23.points[trackIndices23[idx23]];
+                numInAllThree++;
+
+                Vec3 match12Cam1 = frame12.points[idx12 - 1];
+                Vec3 match23Cam2 = frame23.points[idx23]; // idx23 is the current loop index
 
                 Vec3 match12Cam2 = (frame12.pose * match12Cam1.homogeneous()).head<3>();
 
@@ -224,7 +227,7 @@ namespace SfM::solve
             }
 
             scaleFactor *= getMedian(ratios);
-            std::cout << "Matching Frame" << i - 1 << i << " and Frame" << i << i + 1 << ", Accumulated Scale: " << scaleFactor << std::endl;
+            std::cout << "Matching Frame" << i - 1 << i << " and Frame" << i << i + 1 << ", Accumulated Scale: " << scaleFactor << ", Matching points: " << numInAllThree << std::endl;
 
             // Add new pose and points to result
             Mat4 viewMat = frame23.pose;
@@ -232,9 +235,9 @@ namespace SfM::solve
 
             for (int j = 0; j < frame23.points.size(); j++)
             {
-                if (result.points[trackIndices23[j]] != Vec3::Zero())
+                if (result.points[trackIndices23[j]] == Vec3::Zero())
                 {
-                    result.points[trackIndices23[j]] = (util::blendCvMat() * accumulatedPose * frame23.points[j].homogeneous()).head<3>();
+                    result.points[trackIndices23[j]] = (util::blendCvMat() * accumulatedPose * (scaleFactor * frame23.points[j]).homogeneous()).head<3>();
                 }
             }
 
@@ -269,7 +272,7 @@ namespace SfM::solve
 
         trackIndices.reserve(tracks.size());
 
-        Mat4 accumulatedPose = SfM::util::calculateTransformationMatrix(90, 0, 0, SfM::Vec3(0, 0, 0)); // Start Transform
+        Mat4 accumulatedPose = SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)); // Start Transform
         SfMResult result;
 
         EightPointResult frame12;

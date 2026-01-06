@@ -5,6 +5,7 @@ import mathutils
 # ================= CONFIGURATION =================
 #RELATIVE_PATH = "../../Data/test0.txt" 
 RELATIVE_PATH = "../../Data/test0_8point.txt" 
+#RELATIVE_PATH = "../../Data/test0_bundle.txt" 
 # =================================================
 
 def get_absolute_path(rel_path):

@@ -16,7 +16,7 @@ namespace SfM
     using Mat4 = Eigen::Matrix<REAL, 4, 4>;
     using MatX = Eigen::Matrix<REAL, Eigen::Dynamic, Eigen::Dynamic>;
 
-    constexpr REAL EPSILON = static_cast<REAL>(1e-6);
+    constexpr REAL EPSILON = static_cast<REAL>(1e-7);
 
     /**
      * @brief A 2d observation of a keypoint in a frame

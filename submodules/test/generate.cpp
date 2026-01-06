@@ -38,8 +38,6 @@ namespace SfM::test
             Mat4 worldToBlender = cameraExtrinsics[i].inverse();
             Mat4 worldToCv = worldToBlender * util::blendCvMat();
 
-            Mat4 poseInv = cameraExtrinsics[i].inverse();
-
             for (int j = 0; j < numPoints; j++)
             {
                 Vec3 pos = cameraIntrinsics * (worldToCv * points3d[j].homogeneous()).head<3>();
@@ -52,7 +50,7 @@ namespace SfM::test
                 obs.frameId = i;
                 obs.point = Vec2(pos[0] + ru, pos[1] + rv);
 
-                if (static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) < 0.9)
+                if (static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) < 0.85)
                 {
                     tracks[j].observations.push_back(obs);
                 }
@@ -93,8 +91,6 @@ namespace SfM::test
             Mat4 worldToBlender = cameraExtrinsics[i].inverse();
             Mat4 worldToCv = worldToBlender * util::blendCvMat();
 
-            Mat4 poseInv = cameraExtrinsics[i].inverse();
-
             for (int j = 0; j < numPoints; j++)
             {
                 Vec3 pos = cameraIntrinsics * (worldToCv * points3d[j].homogeneous()).head<3>();
@@ -107,7 +103,7 @@ namespace SfM::test
                 keypoint.trackId = j;
                 keypoint.point = Vec2(pos[0] + ru, pos[1] + rv);
 
-                if (static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) < 0.9)
+                if (static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) < 0.85)
                 {
                     currentFrame.keypoints.push_back(keypoint);
                 }

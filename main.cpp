@@ -13,11 +13,11 @@
 int main()
 {
     std::vector<SfM::Mat4> cameraExtrinsics{
-        SfM::util::calculateTransformationMatrix(90, 0, 0, SfM::Vec3(0, 0, 0)),
-        SfM::util::calculateTransformationMatrix(87, 0, 5, SfM::Vec3(0.5, 0, 0.2)),
-        SfM::util::calculateTransformationMatrix(83, 0, 10, SfM::Vec3(1.0, 0, 0.8)),
-        SfM::util::calculateTransformationMatrix(80, 0, 15, SfM::Vec3(1.5, 0, 1)),
-        SfM::util::calculateTransformationMatrix(69, 7, 28, SfM::Vec3(4.02, 0.405, 2.82))};
+        SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)),
+        SfM::util::calculateTransformationMatrixDeg(87, 0, 5, SfM::Vec3(0.5, 0, 0.2)),
+        SfM::util::calculateTransformationMatrixDeg(83, 0, 10, SfM::Vec3(1.0, 0, 0.8)),
+        SfM::util::calculateTransformationMatrixDeg(80, 0, 15, SfM::Vec3(1.5, 0, 1)),
+        SfM::util::calculateTransformationMatrixDeg(69, 7, 28, SfM::Vec3(4.02, 0.405, 2.82))};
 
     SfM::REAL width_px = 1920.;
     SfM::REAL height_px = 1080.;
@@ -35,48 +35,41 @@ int main()
         0, 0, 1;
 
     std::vector<SfM::Vec3> points{};
-    int numPoints = 20;
+    int numPoints = 25;
 
-    auto tracks = SfM::test::generateRandomPointsFrames(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints);
+    auto frames = SfM::test::generateRandomPointsFrames(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints);
+    // auto tracks = SfM::test::generateRandomPointsTracks(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints);
 
-    { // Export Ground Truth values
-        // Convert from Blender space to Computer Vision space bc SfM::io::exportTracksForBlender expects io
-        /* for (auto &extrinsic : cameraExtrinsics)
-        {
-            extrinsic = SfM::util::blenderToCv(extrinsic);
-        } */
+    // Export Ground Truth values
+    SfM::io::exportTracksForBlender(cameraExtrinsics, points, "../../Data/test0.txt");
 
-        SfM::io::exportTracksForBlender(cameraExtrinsics, points, "../../Data/test0.txt");
-    }
 
-    /* for (auto t : tracks)
-    {
-        std::cout << "track: " << t.id << std::endl;
-        for (auto o : t.observations)
-        {
-            std::cout << "frame: " << o.frameId << std::endl;
-        }
-    } */
 
-    /* for (auto f : tracks)
-    {
-        std::cout << "frame: " << f.frameId << std::endl;
-        for (auto &k : f.keypoints)
-        {
-            std::cout << "keypoint: " << k.trackId << std::endl;
-        }
-    } */
-
+    // 8 point algorithm
     auto start = std::chrono::high_resolution_clock::now();
 
-    //auto result = SfM::solve::eightPointAlgorithm(tracks, K, numPoints);
-    auto result = SfM::solve::bundleAdjustment(tracks, K, numPoints);
+    // auto resultEight = SfM::solve::eightPointAlgorithm(tracks, K, cameraExtrinsics.size());
+    auto resultEight = SfM::solve::eightPointAlgorithm(frames, K, numPoints);
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
 
-    SfM::io::exportTracksForBlender(result.extrinsics, result.points, "../../Data/test0_8point.txt");
+
+
+    // bundle adjustment
+    start = std::chrono::high_resolution_clock::now();
+
+    auto resultBundle = SfM::solve::bundleAdjustment(frames, K, numPoints);
+
+    end = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
+
+    SfM::io::exportTracksForBlender(resultEight.extrinsics, resultEight.points, "../../Data/test0_8point.txt");
+    SfM::io::exportTracksForBlender(resultBundle.extrinsics, resultBundle.points, "../../Data/test0_bundle.txt");
+
+
 
     /* cv::Mat img = cv::imread("../../Data/Suzanne/susanne_0001.png");
 

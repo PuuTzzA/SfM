@@ -4,12 +4,17 @@
 
 namespace SfM::util
 {
-    Mat4 calculateTransformationMatrix(REAL rotX, REAL rotY, REAL rotZ, Vec3 translation)
+    Mat4 calculateTransformationMatrixDeg(REAL rotX, REAL rotY, REAL rotZ, Vec3 translation)
     {
         rotX = rotX * M_PI / (REAL)180;
         rotY = rotY * M_PI / (REAL)180;
         rotZ = rotZ * M_PI / (REAL)180;
 
+        return calculateTransformationMatrixRad(rotX, rotY, rotZ, translation);
+    }
+
+    Mat4 calculateTransformationMatrixRad(REAL rotX, REAL rotY, REAL rotZ, Vec3 translation)
+    {
         Mat3 Rx;
         Rx << (REAL)1, (REAL)0, (REAL)0,
             (REAL)0, std::cos(rotX), -std::sin(rotX),
