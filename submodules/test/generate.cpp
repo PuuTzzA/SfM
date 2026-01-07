@@ -115,4 +115,30 @@ namespace SfM::test
         return frames;
     }
 
+    int addOutliersToFrames(std::vector<Frame> &frames, int minNumOutlierPerFrame, int maxNumOutlierPerFrame, int outliersStartIndex)
+    {
+        int maxAdded = 0;
+        for (auto &frame : frames)
+        {
+            int spread = maxNumOutlierPerFrame - minNumOutlierPerFrame;
+            int numOutliers = minNumOutlierPerFrame + static_cast<int>((static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) * (spread + 1)));
+            maxAdded = std::max(maxAdded, numOutliers);
+
+            std::cout << "added " << numOutliers << " outliers to frame" << std::endl;
+
+            for (int i = 0; i < numOutliers; i++)
+            {
+                REAL ru = static_cast<REAL>(1920) * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
+                REAL rv = static_cast<REAL>(1080) * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
+
+                Observation observation;
+                observation.trackId = outliersStartIndex + i;
+                observation.point = Vec2(ru, rv);
+
+                frame.observations.push_back(observation);
+            }
+        }
+
+        return maxAdded;
+    }
 } // Namespace SfM::test

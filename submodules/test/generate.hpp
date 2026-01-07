@@ -50,6 +50,9 @@ namespace SfM::test
      * 
      * @param minNumOutliersPerFrame Minimum number of added outliers per frame
      * @param maxNumOutliersPerFrame Maximum number of added outliers per frame
+     * @param outliersStartIndex Start track index of the first outlier
+     * 
+     * @return Number of 3d points (tracks) added with outlier detections
      */
-    void addOutliersFrames(std::vector<Frame>& frames, int minNumOutlierPerFrame, int maxNumOutlierPerFrame);
+    int addOutliersToFrames(std::vector<Frame>& frames, int minNumOutlierPerFrame, int maxNumOutlierPerFrame, int outliersStartIndex);
 } // Namespace SfM::test

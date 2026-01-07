@@ -29,7 +29,7 @@ namespace SfM
             NOT_FOUND = -2
         };
 
-        Vec2 point;                           // 2D measurement of the point
+        Vec2 point;                           // 2D measurement of the point in pixel coordinates
         int trackId;                          // Unique Id per Frame
         int indexInLastFrame = UNINITIALIZED; // Matching Observation in the previous Frame
     };
