@@ -23,16 +23,14 @@ namespace SfM::io
         out << "\n# Camera frames \n";
         for (const auto &pose : cameraExtrinsics)
         {
-            // Apply conversion: NewPose = OldPose * T_flip
-            // SfM::Mat4 blenderPose = util::cvToBlender(pose);
-            out << pose.format(CleanFmt) << "\n";
+            out << util::cvCameraToBlender(pose).format(CleanFmt) << "\n";
         }
 
         // 5. Write Points (World coordinates are the same, just the camera interprets them differently)
         out << "\n# Points \n";
         for (const auto &p : points)
         {
-            out << p.format(CleanFmt) << "\n";
+            out << (util::blendCvMat3() * p).format(CleanFmt) << "\n";
         }
 
         out.close();

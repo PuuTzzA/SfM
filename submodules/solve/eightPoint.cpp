@@ -70,7 +70,7 @@ namespace SfM::solve
         trackIndices12.reserve(numTotTracks);
         trackIndices23.reserve(numTotTracks);
 
-        Mat4 accumulatedPose = SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)); // Start Transform
+        Mat4 accumulatedPose = util::cvCameraToBlender(util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0))); // Start Transform
         SfMResult result;
         result.points.resize(numTotTracks, Vec3::Zero());
 
@@ -124,12 +124,14 @@ namespace SfM::solve
         {
             if (result.points[trackIndices23[j]] == Vec3::Zero())
             {
-                result.points[trackIndices23[j]] = (util::blendCvMat() * accumulatedPose * frame23.points[j].homogeneous()).head<3>();
+                result.points[trackIndices23[j]] = (accumulatedPose * frame23.points[j].homogeneous()).head<3>();
             }
         }
 
+        Mat4 viewMat = frame23.pose;
+        viewMat.block<3, 1>(0, 3) *= 1;
         result.extrinsics.push_back(accumulatedPose);
-        result.extrinsics.push_back(accumulatedPose *= frame23.pose.inverse());
+        result.extrinsics.push_back(accumulatedPose *= viewMat.inverse());
 
         // Add all the remaining frames one by one
         REAL scaleFactor = static_cast<REAL>(1);
@@ -237,7 +239,7 @@ namespace SfM::solve
             {
                 if (result.points[trackIndices23[j]] == Vec3::Zero())
                 {
-                    result.points[trackIndices23[j]] = (util::blendCvMat() * accumulatedPose * (scaleFactor * frame23.points[j]).homogeneous()).head<3>();
+                    result.points[trackIndices23[j]] = (accumulatedPose * (scaleFactor * frame23.points[j]).homogeneous()).head<3>();
                 }
             }
 
@@ -272,7 +274,7 @@ namespace SfM::solve
 
         trackIndices.reserve(tracks.size());
 
-        Mat4 accumulatedPose = SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)); // Start Transform
+        Mat4 accumulatedPose = util::cvCameraToBlender(util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0))); // Start Transform
         SfMResult result;
 
         EightPointResult frame12;
@@ -298,7 +300,7 @@ namespace SfM::solve
 
         for (int j = 0; j < frame23.points.size(); j++)
         {
-            result.points.push_back((util::blendCvMat() * accumulatedPose * frame23.points[j].homogeneous()).head<3>());
+            result.points.push_back((accumulatedPose * frame23.points[j].homogeneous()).head<3>());
             foundTracks.insert(trackIndices[j]);
         }
 
@@ -379,7 +381,7 @@ namespace SfM::solve
             {
                 if (foundTracks.find(trackIndices[j]) == foundTracks.end()) // Track not jet in the found tracks
                 {
-                    result.points.push_back((util::blendCvMat() * accumulatedPose * (scaleFactor * frame23.points[j]).homogeneous()).head<3>()); // use accumulated pose for last frame bc points are in Cam2 Space
+                    result.points.push_back((accumulatedPose * (scaleFactor * frame23.points[j]).homogeneous()).head<3>()); // use accumulated pose for last frame bc points are in Cam2 Space
                     foundTracks.insert(trackIndices[j]);
                 }
             }

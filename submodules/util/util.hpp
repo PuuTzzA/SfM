@@ -31,7 +31,7 @@ namespace SfM::util
      * @param rotZ Rotation around the z-axis in radians
      */
     template <typename T>
-    Eigen::Matrix<T, 3, 3> calculateRotationMatrix(T rotX, T rotY, T rotZ)
+    Eigen::Matrix<T, 3, 3> calculateRotationMatrixRad(T rotX, T rotY, T rotZ)
     {
         using Mat3T = Eigen::Matrix<T, 3, 3>;
         using Mat4T = Eigen::Matrix<T, 4, 4>;
@@ -59,12 +59,32 @@ namespace SfM::util
     /**
      * @brief Matrix that transforms from the blender coordinate frame (view: -Z, Y: up) to the standart CV coordinate frame (view: +Z, Y: down) and back
      */
-    inline Mat4 blendCvMat()
+    inline Mat4 blendCvMat4()
     {
         // This flips Y (Up -> Down) and Z (Look -Z -> Look +Z)
         Mat4 blenderToCv = Mat4::Identity();
         blenderToCv(1, 1) = -1;
         blenderToCv(2, 2) = -1;
         return blenderToCv;
+    }
+
+    /**
+     * @brief Matrix that transforms from the blender coordinate frame (view: -Z, Y: up) to the standart CV coordinate frame (view: +Z, Y: down) and back
+     */
+    inline Mat3 blendCvMat3()
+    {
+        // This flips Y (Up -> Down) and Z (Look -Z -> Look +Z)
+        Mat3 blenderToCv = Mat3::Identity();
+        blenderToCv(1, 1) = -1;
+        blenderToCv(2, 2) = -1;
+        return blenderToCv;
+    }
+
+    /**
+     * @brief Converts a camera pose from CV coordinates (view: -Z, Y: up) to the blender coordinate frame (view: +Z, Y: down) and back
+     */
+    inline Mat4 cvCameraToBlender(Mat4 cvCam)
+    {
+        return blendCvMat4() * cvCam * calculateTransformationMatrixDeg(180, 0, 0, Vec3(0, 0, 0));
     }
 } // Namespace SfM::util

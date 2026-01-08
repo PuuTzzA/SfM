@@ -38,13 +38,11 @@ int main()
     int numPoints = 25;
 
     auto frames = SfM::test::generateRandomPointsFrames(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints);
-    numPoints += SfM::test::addOutliersToFrames(frames, 1, 6, numPoints);
+    // numPoints += SfM::test::addOutliersToFrames(frames, 1, 6, numPoints);
     // auto tracks = SfM::test::generateRandomPointsTracks(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints);
 
     // Export Ground Truth values
     SfM::io::exportTracksForBlender(cameraExtrinsics, points, "../../Data/test0.txt");
-
-
 
     // 8 point algorithm
     auto start = std::chrono::high_resolution_clock::now();
@@ -58,16 +56,16 @@ int main()
 
     SfM::io::exportTracksForBlender(resultEight.extrinsics, resultEight.points, "../../Data/test0_8point.txt");
 
-    /* // bundle adjustment
+    // bundle adjustment
     start = std::chrono::high_resolution_clock::now();
 
-    auto resultBundle = SfM::solve::bundleAdjustment(frames, K, numPoints);
+    auto resultBundle = SfM::solve::bundleAdjustment(frames, K, numPoints, resultEight);
 
     end = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
 
-    SfM::io::exportTracksForBlender(resultBundle.extrinsics, resultBundle.points, "../../Data/test0_bundle.txt"); */
+    SfM::io::exportTracksForBlender(resultBundle.extrinsics, resultBundle.points, "../../Data/test0_bundle.txt");
 
     /* cv::Mat img = cv::imread("../../Data/Suzanne/susanne_0001.png");
 

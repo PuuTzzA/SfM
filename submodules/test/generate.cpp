@@ -36,7 +36,7 @@ namespace SfM::test
         for (int i = 0; i < cameraExtrinsics.size(); i++)
         {
             Mat4 worldToBlender = cameraExtrinsics[i].inverse();
-            Mat4 worldToCv = worldToBlender * util::blendCvMat();
+            Mat4 worldToCv = util::blendCvMat4() * worldToBlender;
 
             for (int j = 0; j < numPoints; j++)
             {
@@ -89,7 +89,7 @@ namespace SfM::test
             currentFrame.frameId = i;
 
             Mat4 worldToBlender = cameraExtrinsics[i].inverse();
-            Mat4 worldToCv = worldToBlender * util::blendCvMat();
+            Mat4 worldToCv = util::blendCvMat4() * worldToBlender;
 
             for (int j = 0; j < numPoints; j++)
             {
@@ -105,6 +105,7 @@ namespace SfM::test
 
                 if (static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) < 0.85)
                 {
+                    std::cout << "observation at: " << observation.point[0] << ", " << observation.point[1] << ";" << std::endl;
                     currentFrame.observations.push_back(observation);
                 }
             }
@@ -128,12 +129,14 @@ namespace SfM::test
 
             for (int i = 0; i < numOutliers; i++)
             {
-                REAL ru = static_cast<REAL>(1920) * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
-                REAL rv = static_cast<REAL>(1080) * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
+                REAL u = static_cast<REAL>(1920) * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
+                REAL v = static_cast<REAL>(1080) * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
+
+                std::cout << "outlier at: " << u << ", " << v << ";" << std::endl;
 
                 Observation observation;
                 observation.trackId = outliersStartIndex + i;
-                observation.point = Vec2(ru, rv);
+                observation.point = Vec2(u, v);
 
                 frame.observations.push_back(observation);
             }

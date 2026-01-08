@@ -13,7 +13,7 @@ namespace SfM::test
      * @param pointsRadius Maximum absolute distance in x, y, z of the points to the pointsLocation
      * @param points out 3D location of the generated points, as a ground truth value
      * @param numPoints Number of generated points
-     * @param detectionError Random Jiggle that is added to the observations (simulates non-perfect camera/keypoint detection)
+     * @param detectionError [pixel] Random Jiggle that is added to the observations (simulates non-perfect camera/keypoint detection)
      * @return Vector of Tracks from the specified camera poses
      */
     std::vector<Track> generateRandomPointsTracks(std::vector<Mat4> &cameraExtrinsics,
@@ -34,7 +34,7 @@ namespace SfM::test
      * @param pointsRadius Maximum absolute distance in x, y, z of the points to the pointsLocation
      * @param points out 3D location of the generated points, as a ground truth value
      * @param numPoints Number of generated points
-     * @param detectionError Random Jiggle that is added to the observations (simulates non-perfect camera/keypoint detection)
+     * @param detectionError [pixel] Random Jiggle that is added to the observations (simulates non-perfect camera/keypoint detection)
      * @return Vector of Frames from the specified camera poses
      */
     std::vector<Frame> generateRandomPointsFrames(std::vector<Mat4> &cameraExtrinsics,
