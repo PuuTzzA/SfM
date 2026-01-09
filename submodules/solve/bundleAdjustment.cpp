@@ -70,25 +70,45 @@ namespace SfM::solve
         extrinsics[2] = aa_vec[2];
     }
 
-    SfMResult bundleAdjustment(std::vector<Frame> &frames, Mat3 K, const int numTotTracks, SfMResult &initialGuess)
+    SfMResult bundleAdjustment(const std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const SfMResult *initialGuess, const Mat4 startTransform)
     {
         std::vector<Vec3> points3d;
-        points3d.resize(numTotTracks, Vec3(0., 0., 0.));
+        std::vector<REAL> extrinsics(frames.size() * 6); // 3 * angle-axis, 3 * translation
 
-        for (int i = 0; i < numTotTracks; i++)
+        if (initialGuess)
         {
-            points3d[i] = initialGuess.points[i];
+            std::cout << "Initializing values from input parameter." << std::endl;
+        }
+        else
+        {
+            std::cout << "Setting initial values to default." << std::endl;
         }
 
-        std::vector<REAL> extrinsics(frames.size() * 6, static_cast<REAL>(0)); // 3 * angle-axis, 3 * translation
+        points3d.resize(numTotTracks);
+        for (int i = 0; i < numTotTracks; i++)
+        {
+            points3d[i] = initialGuess ? initialGuess->points[i] : Vec3(0, 0, 10);
+        }
 
         for (int i = 0; i < frames.size(); i++)
         {
-            Mat4 viewMat = initialGuess.extrinsics[i].inverse();
-            setRotation(viewMat.block<3, 3>(0, 0), &extrinsics[i * 6]);
-            extrinsics[i * 6 + 3] = viewMat(0, 3);
-            extrinsics[i * 6 + 4] = viewMat(1, 3);
-            extrinsics[i * 6 + 5] = viewMat(2, 3);
+            if (initialGuess)
+            {
+                Mat4 viewMat = initialGuess->extrinsics[i].inverse();
+                setRotation(viewMat.block<3, 3>(0, 0), &extrinsics[i * 6]);
+                extrinsics[i * 6 + 3] = viewMat(0, 3);
+                extrinsics[i * 6 + 4] = viewMat(1, 3);
+                extrinsics[i * 6 + 5] = viewMat(2, 3);
+            }
+            else
+            {
+                extrinsics[i * 6 + 0] = 0;
+                extrinsics[i * 6 + 1] = 0;
+                extrinsics[i * 6 + 2] = 0;
+                extrinsics[i * 6 + 3] = -(i * 0.5);
+                extrinsics[i * 6 + 4] = 0;
+                extrinsics[i * 6 + 5] = 0;
+            }
         }
 
         // Create Problem
@@ -128,9 +148,6 @@ namespace SfM::solve
         std::cout << summary.FullReport() << "\n";
 
         // Extract Results
-        // Mat4 startTransform = util::cvCameraToBlender(util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)));
-        Mat4 startTransform = util::cvCameraToBlender(util::calculateTransformationMatrixDeg(0, 0, 0, SfM::Vec3(0, 0, 0)));
-
         SfMResult result;
         REAL scale = static_cast<REAL>(1);
         for (int i = 0; i < frames.size(); ++i)

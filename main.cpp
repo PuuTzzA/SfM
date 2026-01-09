@@ -59,7 +59,7 @@ int main()
     // bundle adjustment
     start = std::chrono::high_resolution_clock::now();
 
-    auto resultBundle = SfM::solve::bundleAdjustment(frames, K, numPoints, resultEight);
+    auto resultBundle = SfM::solve::bundleAdjustment(frames, K, numPoints, nullptr, SfM::util::cvCameraToBlender(SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0))));
 
     end = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

@@ -105,7 +105,6 @@ namespace SfM::test
 
                 if (static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) < 0.85)
                 {
-                    std::cout << "observation at: " << observation.point[0] << ", " << observation.point[1] << ";" << std::endl;
                     currentFrame.observations.push_back(observation);
                 }
             }

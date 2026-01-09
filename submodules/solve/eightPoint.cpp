@@ -48,7 +48,7 @@ namespace SfM::solve
         return v[n / 2];
     }
 
-    SfMResult eightPointAlgorithm(std::vector<Frame> &frames, Mat3 K, const int numTotTracks)
+    SfMResult eightPointAlgorithm(std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const Mat4 startTransform)
     {
         Mat3 K_inv = K.inverse();
 
@@ -70,7 +70,7 @@ namespace SfM::solve
         trackIndices12.reserve(numTotTracks);
         trackIndices23.reserve(numTotTracks);
 
-        Mat4 accumulatedPose = util::cvCameraToBlender(util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0))); // Start Transform
+        Mat4 accumulatedPose = startTransform;
         SfMResult result;
         result.points.resize(numTotTracks, Vec3::Zero());
 
@@ -249,7 +249,7 @@ namespace SfM::solve
         return result;
     }
 
-    SfMResult eightPointAlgorithm(std::vector<Track> &tracks, Mat3 K, const int numFrames)
+    SfMResult eightPointAlgorithm(std::vector<Track> &tracks, const Mat3 K, const int numFrames, const Mat4 startTransform)
     {
         Mat3 K_inv = K.inverse();
 
@@ -274,7 +274,7 @@ namespace SfM::solve
 
         trackIndices.reserve(tracks.size());
 
-        Mat4 accumulatedPose = util::cvCameraToBlender(util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0))); // Start Transform
+        Mat4 accumulatedPose = startTransform;
         SfMResult result;
 
         EightPointResult frame12;

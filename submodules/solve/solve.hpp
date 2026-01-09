@@ -9,10 +9,11 @@ namespace SfM::solve
      * @param frames Vector of frames with obersations
      * @param K Camera intrinsics
      * @param numTotTracks Total Number of unique tracks (3d points)
+     * @param startTransform (default Mat4::Identity()) Global transform applied to everything
      *
      * @return Camera extrinsics and 3d locations of the 3d points
      */
-    SfMResult eightPointAlgorithm(std::vector<Frame> &frames, Mat3 K, const int numTotTracks);
+    SfMResult eightPointAlgorithm(std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const Mat4 startTransform = Mat4::Identity());
 
     /**
      * @brief Solves for the camera extrinsics and 3d positions of the keypoints with the 8 point algorithm.
@@ -20,10 +21,11 @@ namespace SfM::solve
      * @param tracks Vector of tracked tracks
      * @param K Camera intrinsics
      * @param numFrames Number of images in the sequence
+     * @param startTransform (default Mat4::Identity()) Global transform applied to everything
      *
      * @return Camera extrinsics and 3d locations of the 3d points
      */
-    SfMResult eightPointAlgorithm(std::vector<Track> &tracks, Mat3 K, const int numFrames);
+    SfMResult eightPointAlgorithm(std::vector<Track> &tracks, const Mat3 K, const int numFrames, const Mat4 startTransform = Mat4::Identity());
 
     /**
      * @brief Solves for the camera extrinsics and 3d positions of the keypoints using non-linear optimization (bundle adjustment)
@@ -32,10 +34,11 @@ namespace SfM::solve
      * @param K Camera intrinsics
      * @param numTotTracks Total number of uniquze tracks (3d points)
      * @param initialGuess Initial guess for BA
+     * @param startTransform (default Mat4::Identity()) Global transform applied to everything
      *
      * @return Camera extrinsics and 3d locations of the 3d points
      */
-    SfMResult bundleAdjustment(std::vector<Frame> &frames, Mat3 K, const int numTotTracks, SfMResult &initialGuess);
+    SfMResult bundleAdjustment(const std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const SfMResult *initialGuess, const Mat4 startTransform = Mat4::Identity());
 
     /**
      * @brief Calculates the view matrix and 3d positions between two frames
