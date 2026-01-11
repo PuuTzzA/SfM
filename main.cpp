@@ -35,20 +35,26 @@ int main()
         0, 0, 1;
 
     std::vector<SfM::Vec3> points{};
-    int numPoints = 25;
+    int numPoints = 50;
 
-    auto frames = SfM::test::generateRandomPointsFrames(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints);
-    // numPoints += SfM::test::addOutliersToFrames(frames, 1, 6, numPoints);
-    // auto tracks = SfM::test::generateRandomPointsTracks(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints);
+    auto frames = SfM::test::generateRandomPointsFrames(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints, 0.9, SfM::Vec2(2, 2));
+    numPoints += SfM::test::addOutliersToFrames(frames, 1, 10, numPoints);
 
     // Export Ground Truth values
+    for (auto &e : cameraExtrinsics)
+    {
+        e = SfM::util::cvCameraToBlender(e);
+    }
+    for (auto &p : points)
+    {
+        p = SfM::util::blendCvMat3() * p;
+    }
     SfM::io::exportTracksForBlender(cameraExtrinsics, points, "../../Data/test0.txt");
 
     // 8 point algorithm
     auto start = std::chrono::high_resolution_clock::now();
 
-    // auto resultEight = SfM::solve::eightPointAlgorithm(tracks, K, cameraExtrinsics.size());
-    auto resultEight = SfM::solve::eightPointAlgorithm(frames, K, numPoints);
+    auto resultEight = SfM::solve::eightPointAlgorithm(frames, K, numPoints, SfM::util::cvCameraToBlender(SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0))));
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -56,7 +62,7 @@ int main()
 
     SfM::io::exportTracksForBlender(resultEight.extrinsics, resultEight.points, "../../Data/test0_8point.txt");
 
-    // bundle adjustment
+    /* // bundle adjustment
     start = std::chrono::high_resolution_clock::now();
 
     auto resultBundle = SfM::solve::bundleAdjustment(frames, K, numPoints, nullptr, SfM::util::cvCameraToBlender(SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0))));
@@ -65,7 +71,7 @@ int main()
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
 
-    SfM::io::exportTracksForBlender(resultBundle.extrinsics, resultBundle.points, "../../Data/test0_bundle.txt");
+    SfM::io::exportTracksForBlender(resultBundle.extrinsics, resultBundle.points, "../../Data/test0_bundle.txt"); */
 
     /* cv::Mat img = cv::imread("../../Data/Suzanne/susanne_0001.png");
 

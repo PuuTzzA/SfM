@@ -105,7 +105,7 @@ namespace SfM::solve
                 extrinsics[i * 6 + 0] = 0;
                 extrinsics[i * 6 + 1] = 0;
                 extrinsics[i * 6 + 2] = 0;
-                extrinsics[i * 6 + 3] = -(i * 0.5);
+                extrinsics[i * 6 + 3] = -(i * 1);
                 extrinsics[i * 6 + 4] = 0;
                 extrinsics[i * 6 + 5] = 0;
             }
@@ -122,9 +122,9 @@ namespace SfM::solve
             {
                 REAL *pointPtr = points3d[point.trackId].data();
                 ceres::CostFunction *costFunction = BundleAdjustmentConstraint::create(K, point.point, 1.0);
-                // problem.AddResidualBlock(costFunction, new ceres::HuberLoss(1.0), extrinsicPtr, pointPtr);
-                // problem.AddResidualBlock(costFunction, new ceres::CauchyLoss(0.5), extrinsicPtr, pointPtr); // very good at outlier detection
-                problem.AddResidualBlock(costFunction, nullptr, extrinsicPtr, pointPtr);
+                // problem.AddResidualBlock(costFunction, new ceres::TukeyLoss(1.0), extrinsicPtr, pointPtr); // http://ceres-solver.org/nnls_modeling.html#instances
+                problem.AddResidualBlock(costFunction, new ceres::CauchyLoss(0.5), extrinsicPtr, pointPtr); // very good at outlier detection (but as the normal BA, kinda volatile to changes in the initialization)
+                // problem.AddResidualBlock(costFunction, nullptr, extrinsicPtr, pointPtr);
             }
         }
 
@@ -135,8 +135,9 @@ namespace SfM::solve
 
         // Solve Problem
         ceres::Solver::Options options;
-        options.linear_solver_type = ceres::DENSE_SCHUR;
-        options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
+        options.linear_solver_type = ceres::DENSE_SCHUR;                 // (DENSE_SCHUR and SPARSE_SCHUR best for BA) http://ceres-solver.org/nnls_solving.html#linear-solvers
+        options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT; // LEVENBERG_MARQUARDT (better?) is the default, other is DOGLEG
+        options.max_num_consecutive_invalid_steps = 10;
         options.max_num_iterations = 256;
         options.num_threads = std::thread::hardware_concurrency();
         options.minimizer_progress_to_stdout = true;

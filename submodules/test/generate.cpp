@@ -60,12 +60,24 @@ namespace SfM::test
         return tracks;
     }
 
+    inline REAL testReprojectionError(const Mat3 &K, const Vec2 observation, const Vec3 point3d, const Mat4 &viewMatrix)
+    {
+        Vec3 p = K * (viewMatrix * point3d.homogeneous()).head<3>();
+        p[0] /= p[2];
+        p[1] /= p[2];
+        Vec3 obs(observation[0], observation[1], 1.);
+        REAL dx = p[0] - obs[0];
+        REAL dy = p[1] - obs[1];
+        return dx * dx + dy * dy;
+    }
+
     std::vector<Frame> generateRandomPointsFrames(std::vector<Mat4> &cameraExtrinsics,
                                                   Mat3 cameraIntrinsics,
                                                   Vec3 pointsLocation,
                                                   Vec3 pointsRadius,
                                                   std::optional<std::reference_wrapper<std::vector<Vec3>>> points,
                                                   int numPoints,
+                                                  REAL inclusionProb,
                                                   Vec2 detectionError)
     {
         std::vector<Frame> frames;
@@ -103,8 +115,10 @@ namespace SfM::test
                 observation.trackId = j;
                 observation.point = Vec2(pos[0] + ru, pos[1] + rv);
 
-                if (static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) < 0.85)
+                if (static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX) < inclusionProb)
                 {
+                    // std::cout << "observation at: " << observation.point[0] << ", " << observation.point[1] << std::endl;
+                    // std::cout << "GENERATE: error " << testReprojectionError(cameraIntrinsics, observation.point, points3d[j], worldToCv) << std::endl;
                     currentFrame.observations.push_back(observation);
                 }
             }
@@ -131,7 +145,7 @@ namespace SfM::test
                 REAL u = static_cast<REAL>(1920) * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
                 REAL v = static_cast<REAL>(1080) * static_cast<REAL>(rand()) / static_cast<REAL>(RAND_MAX);
 
-                std::cout << "outlier at: " << u << ", " << v << ";" << std::endl;
+                // std::cout << "outlier at: " << u << ", " << v << ";" << std::endl;
 
                 Observation observation;
                 observation.trackId = outliersStartIndex + i;

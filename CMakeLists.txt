@@ -10,6 +10,8 @@ add_executable(SfM
     submodules/io/blender.cpp
     submodules/solve/bundleAdjustment.cpp
     submodules/solve/eightPoint.cpp
+    submodules/solve/RANSAC.cpp
+    submodules/solve/scene.cpp
     submodules/test/generate.cpp
     submodules/util/util.cpp
     # add more source files here
