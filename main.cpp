@@ -13,18 +13,40 @@
 
 int main()
 {
-    cv::Mat img = cv::imread("../../Data/calibration.png");
+    std::string path = "../../Data/calibration.jpg";
 
-    if (img.empty())
+    auto startLoadCv = std::chrono::steady_clock::now();
+
+    std::cout << "Loading image with OpenCv" << std::endl;
+    cv::Mat img = cv::imread(path);
+    //cv::cvtColor(img, img, cv::COLOR_BGR2RGB); // Convert BGR to RGB
+    //auto vecimg = SfM::io::cvMatToVector(img);
+
+    std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startLoadCv).count() << "ms" << std::endl;
+
+    auto startLoad = std::chrono::steady_clock::now();
+
+    auto vecimg2 = SfM::io::loadImage(path);
+
+    std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startLoad).count() << "ms" << std::endl;
+
+    bool areSimilar = true;
+    /* for (size_t i = 0; i < vecimg.size(); i++)
     {
-        std::cout << "Could not read the image: " << std::endl;
-        return 1;
-    }
+        if (std::abs(vecimg[i] - vecimg2[i]) > 2)
+        { // Allow small IDCT errors
+            areSimilar = false;
+            std::cout << "difference at " << i << " of " << std::abs(vecimg[i] - vecimg2[i]) << std::endl;
+            break;
+        }
+    } */
 
-    //SfM::detect::harrisCornerDetectionSubPixelOpenCv(img);
-    SfM::detect::harrisCornerDetectionOpenCv(img);
+    std::cout << "Vecs equal? " << areSimilar << std::endl;
 
-    std::cout << "OpenCV version: " << CV_VERSION << std::endl;
+    // SfM::detect::harrisCornerDetectionSubPixelOpenCv(img);
+    // SfM::detect::harrisCornerDetectionOpenCv(img);
+
+    // std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
     return 0;
 

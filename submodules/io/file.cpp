@@ -6,8 +6,78 @@
 
 namespace SfM::io
 {
-    std::vector<uchar> loadImage(const std::string &path)
+    std::string getExtension(const std::string &path)
     {
+        size_t dotPos = path.rfind('.');
+        if (dotPos == std::string::npos)
+            return "";
+        std::string ext = path.substr(dotPos + 1);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        return ext;
+    }
+
+    std::vector<uchar> loadJpg(const std::string &path, int flags)
+    {
+        std::ifstream file(path, std::ios::binary | std::ios::ate);
+        if (!file)
+        {
+            std::cerr << "Failed to open file: " << path << std::endl;
+            return {};
+        }
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        std::vector<uchar> jpegBuffer(size);
+        if (!file.read((char *)jpegBuffer.data(), size))
+            return {};
+
+        // Initialize Decompressor
+        tjhandle decompressor = tjInitDecompress();
+        int width, height, subsamp, colorspace;
+
+        // Read Header
+        if (tjDecompressHeader3(decompressor, jpegBuffer.data(), size, &width, &height, &subsamp, &colorspace) < 0)
+        {
+            tjDestroy(decompressor);
+            return {};
+        }
+
+        // Allocate RGB Vector (3 bytes per pixel)
+        std::vector<uchar> pixels(width * height * 3);
+
+        // Decompress directly to vector
+        // TJPF_RGB ensures standard RGB byte order
+        if (tjDecompress2(decompressor, jpegBuffer.data(), size, pixels.data(), width,
+                          0, height, TJPF_RGB, flags) < 0)
+        {
+            tjDestroy(decompressor);
+            return {};
+        }
+
+        tjDestroy(decompressor);
+        return pixels;
+    }
+
+    std::vector<uchar> loadImage(const std::string &path, int turboJpegFlags)
+    {
+        std::string ext = getExtension(path);
+        if (ext == "jpg" || ext == "jpeg") // INFO: turbojpeg is consistantly 30-60ms faster than OpenCv (1920x1080)
+        {
+            std::cout << "Loading image with turbojpeg" << std::endl;
+            return loadJpg(path, turboJpegFlags);
+        }
+        else
+        {
+            std::cout << "Loading image with OpenCv" << std::endl; // INFO: loadPNG was slower than OpenCV, therefore I removed it again
+
+            cv::Mat img = cv::imread(path, cv::IMREAD_COLOR);
+            cv::cvtColor(img, img, cv::COLOR_BGR2RGB); // Convert BGR to RGB
+            if (img.empty())
+            {
+                std::cerr << "OpenCV failed to load: " << path << std::endl;
+                return {};
+            }
+            return cvMatToVector(img);
+        }
     }
 
     std::vector<uchar> cvMatToVector(cv::Mat &mat)

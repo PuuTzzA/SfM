@@ -2,15 +2,20 @@
 #include "../SfM.hpp"
 #include <string>
 #include <opencv2/opencv.hpp>
+#include <turbojpeg.h>
 
 namespace SfM::io
 {
     /**
-     * @brief Loads an image from disk into a std::vector with maximal speed.
+     * @brief Loads an image from disk into a std::vector.
+     * If the image is a .jpg (.jpeg) then use turbojpeg for maximal performance.
+     * The file is stored like this in memory: [r, g, b, r, g, b, r, g, b, ...] from top left, row by row
+     *
      * @param path Path to the image
-     * @return std::vector<uchar> of the image 
+     * @param turboJpegFlags (= TJFLAG_ACCURATEDCT) Flags for turboJpeg (no big speed difference between TJFLAG_ACCURATEDCT and TJFLAG_FASTDCT)
+     * @return std::vector<uchar> of the image
      */
-    std::vector<uchar> loadImage(const std::string &path);
+    std::vector<uchar> loadImage(const std::string &path, int turboJpegFlags = TJFLAG_ACCURATEDCT);
 
     /**
      * @brief converts a OpenCv Matrix to a c++ std::vector<uchar>.
