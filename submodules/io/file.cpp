@@ -6,6 +6,38 @@
 
 namespace SfM::io
 {
+    std::vector<uchar> loadImage(const std::string &path)
+    {
+    }
+
+    std::vector<uchar> cvMatToVector(cv::Mat &mat)
+    {
+        if (mat.empty())
+        {
+            return std::vector<uchar>();
+        }
+
+        // 2. Handle memory continuity
+        // If the matrix is a Region of Interest (ROI) or has padding, the memory
+        // is not continuous. We must make it continuous to copy it into a flat vector.
+        // Since 'mat' is an rvalue reference (&&), we can modify it or clone it
+        // internally without affecting the caller's "original" variable (which is dying anyway).
+        if (!mat.isContinuous())
+        {
+            mat = mat.clone();
+        }
+
+        // 3. Calculate total bytes
+        // total() returns the number of pixels.
+        // elemSize() returns the number of bytes per pixel (e.g., 3 for CV_8UC3, 4 for float).
+        size_t sizeInBytes = mat.total() * mat.elemSize();
+
+        // 4. Copy data to vector
+        // We use the pointer to the start of the data and the calculated size.
+        // std::vector copies the data into its own managed memory.
+        return std::vector<uchar>(mat.data, mat.data + sizeInBytes);
+    }
+
     std::vector<std::vector<Vec2>> loadTrackedPoints(const std::string &path)
     {
         std::ifstream file(path);

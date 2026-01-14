@@ -6,10 +6,24 @@
 namespace SfM::io
 {
     /**
+     * @brief Loads an image from disk into a std::vector with maximal speed.
+     * @param path Path to the image
+     * @return std::vector<uchar> of the image 
+     */
+    std::vector<uchar> loadImage(const std::string &path);
+
+    /**
+     * @brief converts a OpenCv Matrix to a c++ std::vector<uchar>.
+     * @param mat cv::Mat
+     * @return std::vector of the image
+     */
+    std::vector<uchar> cvMatToVector(cv::Mat &mat);
+
+    /**
      * @brief Reads tracked points from a file.
      *
-     * @param inputImagePath Path to the input file. Expects the following format: 
-     * - #id #frame x y 
+     * @param inputImagePath Path to the input file. Expects the following format:
+     * - #id #frame x y
      * - #id #frame x y
      * ...
      * @return Vector of tracked points. result[0] = first track, result[0][0] = first track, first frame

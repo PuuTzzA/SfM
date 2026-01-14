@@ -30,7 +30,8 @@ namespace SfM::solve
     // SfMResult eightPointAlgorithm(std::vector<Track> &tracks, const Mat3 K, const int numFrames, const Mat4 startTransform = Mat4::Identity());
 
     /**
-     * @brief Solves for the camera extrinsics and 3d positions of the keypoints using non-linear optimization (bundle adjustment)
+     * @brief Solves for the camera extrinsics and 3d positions of the keypoints using non-linear optimization (bundle adjustment).
+     * @note Very very sensitive to the starting initialization!
      *
      * @param frames Vector of frames with observations
      * @param K Camera intrinsics

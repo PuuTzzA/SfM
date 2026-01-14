@@ -7,8 +7,9 @@
 namespace SfM::io
 {
     /**
-     * @brief Exports tracks to a file that can be imported into blender. ALL EXTRINSICS AND POINTS ARE IN THE CV COORDINATE FRAME
-     *
+     * @brief Exports tracks to a file that can be imported into blender.
+     * @note ALL INPUT EXTRINSICS AND POINTS ARE EXPECTED IN THE CV COORDINATE FRAME
+     * 
      * @param cameraExtrinsics Vector of cameraExtrinsics
      * @param points Vector of 3d points
      * @param path String to output path

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(SfM 
     main.cpp
+    submodules/detect/detect.cpp
     submodules/io/file.cpp
     submodules/io/blender.cpp
     submodules/solve/bundleAdjustment.cpp

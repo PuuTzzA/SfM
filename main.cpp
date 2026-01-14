@@ -1,4 +1,5 @@
 #include <iostream>
+#include "submodules/detect/detect.hpp"
 #include "submodules/io/file.hpp"
 #include "submodules/solve/solve.hpp"
 #include "submodules/io/blender.hpp"
@@ -12,6 +13,21 @@
 
 int main()
 {
+    cv::Mat img = cv::imread("../../Data/calibration.png");
+
+    if (img.empty())
+    {
+        std::cout << "Could not read the image: " << std::endl;
+        return 1;
+    }
+
+    //SfM::detect::harrisCornerDetectionSubPixelOpenCv(img);
+    SfM::detect::harrisCornerDetectionOpenCv(img);
+
+    std::cout << "OpenCV version: " << CV_VERSION << std::endl;
+
+    return 0;
+
     std::vector<SfM::Mat4> cameraExtrinsics{
         SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)),
         SfM::util::calculateTransformationMatrixDeg(87, 0, 5, SfM::Vec3(0.5, 0, 0.2)),
@@ -37,7 +53,7 @@ int main()
     std::vector<SfM::Vec3> points{};
     int numPoints = 50;
 
-    auto frames = SfM::test::generateRandomPointsFrames(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints, 0.9, SfM::Vec2(2, 2));
+    auto frames = SfM::test::generateRandomPointsFrames(cameraExtrinsics, K, SfM::Vec3(0, 7, 0), SfM::Vec3(2, 2, 1), points, numPoints, 0.9, SfM::Vec2(1, 1));
     numPoints += SfM::test::addOutliersToFrames(frames, 1, 10, numPoints);
 
     // Export Ground Truth values
@@ -62,28 +78,16 @@ int main()
 
     SfM::io::exportTracksForBlender(resultEight.extrinsics, resultEight.points, "../../Data/test0_8point.txt");
 
-    /* // bundle adjustment
-    start = std::chrono::high_resolution_clock::now();
+    // bundle adjustment
+    /* auto start2 = std::chrono::high_resolution_clock::now();
 
     auto resultBundle = SfM::solve::bundleAdjustment(frames, K, numPoints, nullptr, SfM::util::cvCameraToBlender(SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0))));
 
-    end = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
+    auto end2 = std::chrono::high_resolution_clock::now();
+    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+    std::cout << "Execution time: " << duration2.count() << " ms" << std::endl;
 
     SfM::io::exportTracksForBlender(resultBundle.extrinsics, resultBundle.points, "../../Data/test0_bundle.txt"); */
 
-    /* cv::Mat img = cv::imread("../../Data/Suzanne/susanne_0001.png");
-
-    if (img.empty())
-    {
-        std::cout << "Could not read the image: " << std::endl;
-        return 1;
-    }
-
-    cv::imshow("Display window", img);
-    int k = cv::waitKey(0); // Wait for a keystroke in the window */
-
-    std::cout << "OpenCV version: " << CV_VERSION << std::endl;
     return 0;
 }
