@@ -19,6 +19,21 @@ namespace SfM
     constexpr REAL EPSILON = static_cast<REAL>(1e-7);
 
     /**
+     * @brief Wrapper for an image.
+     * @param data Holds the image data in a std::vector<uchar>. The data is stored in the following way [T1, T2, T3, ...] from top left to bottom right row by row.
+     * If T is uchar then it is [r1, g1, b1, r2, g2, b2, ...]
+     * @param width Width of the image
+     * @param height Height of the image
+     */
+    template <typename T>
+    struct Image
+    {
+        std::vector<T> data;
+        int width;
+        int height;
+    };
+
+    /**
      * @brief An observation represents one 2D measurement
      */
     struct Observation

@@ -12,10 +12,10 @@ namespace SfM::io
      * The file is stored like this in memory: [r, g, b, r, g, b, r, g, b, ...] from top left, row by row
      *
      * @param path Path to the image
-     * @param turboJpegFlags (= TJFLAG_ACCURATEDCT) Flags for turboJpeg (no big speed difference between TJFLAG_ACCURATEDCT and TJFLAG_FASTDCT)
-     * @return std::vector<uchar> of the image
+     * @param turboJpegFlags (default TJFLAG_ACCURATEDCT) Flags for turboJpeg (no big speed difference between TJFLAG_ACCURATEDCT and TJFLAG_FASTDCT)
+     * @return Image wrapper struct {data, width, height}
      */
-    std::vector<uchar> loadImage(const std::string &path, int turboJpegFlags = TJFLAG_ACCURATEDCT);
+    Image<uchar> loadImage(const std::string &path, int turboJpegFlags = TJFLAG_ACCURATEDCT);
 
     /**
      * @brief converts a OpenCv Matrix to a c++ std::vector<uchar>.
@@ -23,6 +23,14 @@ namespace SfM::io
      * @return std::vector of the image
      */
     std::vector<uchar> cvMatToVector(cv::Mat &mat);
+
+    /**
+     * @brief Converts a struct Image to a cv::Mat.
+     * @param image Input image
+     * @return cv::Mat of the image (rgb if T == ucar, monochrome if T == REAL)
+     */
+    template<typename T>
+    cv::Mat imageToCvMat(const Image<T>& image);
 
     /**
      * @brief Reads tracked points from a file.

@@ -16,7 +16,7 @@ namespace SfM::io
         return ext;
     }
 
-    std::vector<uchar> loadJpg(const std::string &path, int flags)
+    Image<uchar> loadJpg(const std::string &path, int flags)
     {
         std::ifstream file(path, std::ios::binary | std::ios::ate);
         if (!file)
@@ -54,10 +54,10 @@ namespace SfM::io
         }
 
         tjDestroy(decompressor);
-        return pixels;
+        return {pixels, width, height};
     }
 
-    std::vector<uchar> loadImage(const std::string &path, int turboJpegFlags)
+    Image<uchar> loadImage(const std::string &path, int turboJpegFlags)
     {
         std::string ext = getExtension(path);
         if (ext == "jpg" || ext == "jpeg") // INFO: turbojpeg is consistantly 30-60ms faster than OpenCv (1920x1080)
@@ -76,8 +76,44 @@ namespace SfM::io
                 std::cerr << "OpenCV failed to load: " << path << std::endl;
                 return {};
             }
-            return cvMatToVector(img);
+            return {cvMatToVector(img), img.cols, img.rows};
         }
+    }
+
+    template <>
+    cv::Mat imageToCvMat<uchar>(const Image<uchar> &image)
+    {
+        if (image.data.empty() || image.width <= 0 || image.height <= 0)
+        {
+            return cv::Mat();
+        }
+        cv::Mat wrappedMat(image.height, image.width, CV_8UC3, (void *)image.data.data());
+        cv::cvtColor(wrappedMat, wrappedMat, cv::COLOR_RGB2BGR);
+        return wrappedMat.clone();
+    }
+
+    template <>
+    cv::Mat imageToCvMat<float>(const Image<float> &image)
+    {
+        if (image.data.empty() || image.width <= 0 || image.height <= 0)
+        {
+            return cv::Mat();
+        }
+
+        cv::Mat wrapped(image.height, image.width, CV_32FC1, (void *)image.data.data());
+        return wrapped.clone();
+    }
+
+    template <>
+    cv::Mat imageToCvMat<double>(const Image<double> &image)
+    {
+        if (image.data.empty() || image.width <= 0 || image.height <= 0)
+        {
+            return cv::Mat();
+        }
+
+        cv::Mat wrapped(image.height, image.width, CV_64FC1, (void *)image.data.data());
+        return wrapped.clone();
     }
 
     std::vector<uchar> cvMatToVector(cv::Mat &mat)

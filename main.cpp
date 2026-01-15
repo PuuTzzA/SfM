@@ -19,8 +19,8 @@ int main()
 
     std::cout << "Loading image with OpenCv" << std::endl;
     cv::Mat img = cv::imread(path);
-    //cv::cvtColor(img, img, cv::COLOR_BGR2RGB); // Convert BGR to RGB
-    //auto vecimg = SfM::io::cvMatToVector(img);
+    cv::cvtColor(img, img, cv::COLOR_BGR2RGB); // Convert BGR to RGB
+    auto vecimg = SfM::io::cvMatToVector(img);
 
     std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startLoadCv).count() << "ms" << std::endl;
 
@@ -31,17 +31,37 @@ int main()
     std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startLoad).count() << "ms" << std::endl;
 
     bool areSimilar = true;
-    /* for (size_t i = 0; i < vecimg.size(); i++)
+    for (size_t i = 0; i < vecimg.size(); i++)
     {
-        if (std::abs(vecimg[i] - vecimg2[i]) > 2)
-        { // Allow small IDCT errors
+        if (std::abs(vecimg[i] - vecimg2.data[i]) > 2)
+        {
             areSimilar = false;
-            std::cout << "difference at " << i << " of " << std::abs(vecimg[i] - vecimg2[i]) << std::endl;
+            std::cout << "difference at " << i << " of " << std::abs(vecimg[i] - vecimg2.data[i]) << std::endl;
             break;
         }
-    } */
+    }
+
+    SfM::Image<SfM::REAL> kkkk{};
+    kkkk.width = vecimg2.width;
+    kkkk.height = vecimg2.height;
+    kkkk.data.resize(kkkk.width * kkkk.height);
+
+    for (int i = 0; i < kkkk.height; i++)
+    {
+        for (int j = 0; j < kkkk.width; j++)
+        {
+            int idx = i * kkkk.width + j;
+            int idx2 = idx * 3;
+            kkkk.data[idx] = static_cast<SfM::REAL>(vecimg2.data[idx2]); 
+        }
+    }
 
     std::cout << "Vecs equal? " << areSimilar << std::endl;
+    std::cout << "w: " << vecimg2.width << ", h: " << vecimg2.height << std::endl;
+
+    auto matmat = SfM::io::imageToCvMat(kkkk);
+
+    cv::imwrite("../../Data/kjlakjadsdasadsf.png", matmat);
 
     // SfM::detect::harrisCornerDetectionSubPixelOpenCv(img);
     // SfM::detect::harrisCornerDetectionOpenCv(img);
