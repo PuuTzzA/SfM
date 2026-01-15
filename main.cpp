@@ -66,8 +66,6 @@ int main()
     // SfM::detect::harrisCornerDetectionSubPixelOpenCv(img);
     // SfM::detect::harrisCornerDetectionOpenCv(img);
 
-    // std::cout << "OpenCV version: " << CV_VERSION << std::endl;
-
     return 0;
 
     std::vector<SfM::Mat4> cameraExtrinsics{
