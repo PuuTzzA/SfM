@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(SfM 
     main.cpp
+    submodules/detect/detect.cpp
     submodules/detect/detectOpenCv.cpp
     submodules/io/file.cpp
     submodules/io/blender.cpp
@@ -19,6 +20,8 @@ add_executable(SfM
 )
 
 # If you need external libraries:
+find_package(OpenMP REQUIRED)
+
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(Ceres REQUIRED)
@@ -39,6 +42,7 @@ target_include_directories(SfM
 
 target_link_libraries(SfM
     PRIVATE
+        OpenMP::OpenMP_CXX
         ${OpenCV_LIBS}
         Eigen3::Eigen
         Ceres::ceres

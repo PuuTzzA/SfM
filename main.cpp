@@ -13,57 +13,67 @@
 
 int main()
 {
-    std::string path = "../../Data/calibration.jpg";
+    std::string path = "../../Data/real_image.jpg";
 
-    auto startLoadCv = std::chrono::steady_clock::now();
+    /*
+        auto startLoadCv = std::chrono::steady_clock::now();
+        std::cout << "Loading image with OpenCv" << std::endl;
+     cv::Mat img = cv::imread(path);
+     cv::cvtColor(img, img, cv::COLOR_BGR2RGB); // Convert BGR to RGB
+     auto vecimg = SfM::io::cvMatToVector(img);
 
-    std::cout << "Loading image with OpenCv" << std::endl;
+     std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startLoadCv).count() << "ms" << std::endl;
+
+     auto startLoad = std::chrono::steady_clock::now();
+
+     auto vecimg2 = SfM::io::loadImage(path);
+
+     std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startLoad).count() << "ms" << std::endl;
+
+     bool areSimilar = true;
+     for (size_t i = 0; i < vecimg.size(); i++)
+     {
+         if (std::abs(vecimg[i] - vecimg2.data[i]) > 2)
+         {
+             areSimilar = false;
+             std::cout << "difference at " << i << " of " << std::abs(vecimg[i] - vecimg2.data[i]) << std::endl;
+             break;
+         }
+     } */
+
     cv::Mat img = cv::imread(path);
-    cv::cvtColor(img, img, cv::COLOR_BGR2RGB); // Convert BGR to RGB
-    auto vecimg = SfM::io::cvMatToVector(img);
+    SfM::detect::harrisCornerDetectionOpenCv(img);
 
-    std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startLoadCv).count() << "ms" << std::endl;
+    auto startDetectCV = std::chrono::steady_clock::now();
+    auto cornersCV = SfM::detect::harrisCornerDetectionSubPixelOpenCv(img);
+    std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetectCV).count() << "ms" << std::endl;
 
-    auto startLoad = std::chrono::steady_clock::now();
+    std::sort(cornersCV.begin(), cornersCV.end(),
+              [](const SfM::Vec2 &u, const SfM::Vec2 &v)
+              {
+                  return u[0] < v[0];
+              });
 
-    auto vecimg2 = SfM::io::loadImage(path);
+    SfM::Image image = SfM::io::loadImage(path);
 
-    std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startLoad).count() << "ms" << std::endl;
+    auto startDetect = std::chrono::steady_clock::now();
+    auto corners = SfM::detect::harrisCornerDetection(image, 2);
+    std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetect).count() << "ms" << std::endl;
 
-    bool areSimilar = true;
-    for (size_t i = 0; i < vecimg.size(); i++)
+    std::sort(corners.begin(), corners.end(),
+              [](const SfM::Vec2 &u, const SfM::Vec2 &v)
+              {
+                  return u[0] < v[0];
+              });
+
+    std::cout << "len of cornersCv: " << cornersCV.size() << ", len of corners: " << corners.size() << std::endl;
+
+    for (int i = 0; i < cornersCV.size(); i++)
     {
-        if (std::abs(vecimg[i] - vecimg2.data[i]) > 2)
-        {
-            areSimilar = false;
-            std::cout << "difference at " << i << " of " << std::abs(vecimg[i] - vecimg2.data[i]) << std::endl;
-            break;
-        }
+        auto c = cornersCV[i];
+        // std::cout << "cv: corner at: " << c[0] << ", " << 1080 - c[1] << std::endl;
     }
 
-    SfM::Image<SfM::REAL> kkkk{};
-    kkkk.width = vecimg2.width;
-    kkkk.height = vecimg2.height;
-    kkkk.data.resize(kkkk.width * kkkk.height);
-
-    for (int i = 0; i < kkkk.height; i++)
-    {
-        for (int j = 0; j < kkkk.width; j++)
-        {
-            int idx = i * kkkk.width + j;
-            int idx2 = idx * 3;
-            kkkk.data[idx] = static_cast<SfM::REAL>(vecimg2.data[idx2]); 
-        }
-    }
-
-    std::cout << "Vecs equal? " << areSimilar << std::endl;
-    std::cout << "w: " << vecimg2.width << ", h: " << vecimg2.height << std::endl;
-
-    auto matmat = SfM::io::imageToCvMat(kkkk);
-
-    cv::imwrite("../../Data/kjlakjadsdasadsf.png", matmat);
-
-    // SfM::detect::harrisCornerDetectionSubPixelOpenCv(img);
     // SfM::detect::harrisCornerDetectionOpenCv(img);
 
     // std::cout << "OpenCV version: " << CV_VERSION << std::endl;

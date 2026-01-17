@@ -28,6 +28,11 @@ namespace SfM
     template <typename T>
     struct Image
     {
+        inline T &at(int x, int y)
+        {
+            return data[y * width + x];
+        }
+
         std::vector<T> data;
         int width;
         int height;
