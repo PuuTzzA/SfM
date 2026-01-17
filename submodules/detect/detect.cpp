@@ -108,7 +108,7 @@ namespace SfM::detect
             }
         }
 
-        std::cout << "max: " << max << ", " << (max > -1.2e-10) << "\n";
+        // std::cout << "max: " << max << ", " << (max > -1.2e-10) << "\n";
 // Threshhold the corners
 #pragma omp parallel for
         for (int y = 1; y < image.height - 1; y++)
@@ -129,11 +129,11 @@ namespace SfM::detect
             }
         }
 
-        gray.data = harris;
-        auto cv = io::imageToCvMat(gray);
+        // gray.data = harris;
+        // auto cv = io::imageToCvMat(gray);
         // cv::dilate(cv, cv, cv::Mat());
 
-        cv::imwrite("../../Data/______.png", cv);
+        // cv::imwrite("../../Data/______.png", cv);
 
         return {};
     }

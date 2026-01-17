@@ -31,7 +31,7 @@ namespace SfM::detect
             }
         }
 
-        cv::imwrite("../../Data/corner.png", image);
+        //cv::imwrite("../../Data/corner.png", image);
 
         /* cv::imshow("dst", image);
 

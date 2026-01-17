@@ -10,6 +10,7 @@
 #include <opencv2/highgui.hpp>
 #include <optional>
 #include <chrono>
+#include <numeric>
 
 int main()
 {
@@ -42,10 +43,10 @@ int main()
      } */
 
     cv::Mat img = cv::imread(path);
-    SfM::detect::harrisCornerDetectionOpenCv(img);
 
-    auto startDetectCV = std::chrono::steady_clock::now();
     auto cornersCV = SfM::detect::harrisCornerDetectionSubPixelOpenCv(img);
+    auto startDetectCV = std::chrono::steady_clock::now();
+    SfM::detect::harrisCornerDetectionOpenCv(img);
     std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetectCV).count() << "ms" << std::endl;
 
     std::sort(cornersCV.begin(), cornersCV.end(),
@@ -56,17 +57,25 @@ int main()
 
     SfM::Image image = SfM::io::loadImage(path);
 
-    auto startDetect = std::chrono::steady_clock::now();
-    auto corners = SfM::detect::harrisCornerDetection(image, 2);
-    std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetect).count() << "ms" << std::endl;
+    std::vector<int> millis;
+    for (int _ = 0; _ < 20; _++)
+    {
+        auto startDetect = std::chrono::steady_clock::now();
+        auto corners = SfM::detect::harrisCornerDetection(image, 2);
+        auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetect).count();
+        millis.push_back(dur);
+        std::cout << _ << ": Took " << dur << "ms" << std::endl;
+    }
 
-    std::sort(corners.begin(), corners.end(),
+    std::cout << "average" << std::reduce(millis.begin(), millis.end()) / millis.size() << std::endl;
+
+    /* std::sort(corners.begin(), corners.end(),
               [](const SfM::Vec2 &u, const SfM::Vec2 &v)
               {
                   return u[0] < v[0];
-              });
+              }); */
 
-    std::cout << "len of cornersCv: " << cornersCV.size() << ", len of corners: " << corners.size() << std::endl;
+    // std::cout << "len of cornersCv: " << cornersCV.size() << ", len of corners: " << corners.size() << std::endl;
 
     for (int i = 0; i < cornersCV.size(); i++)
     {
