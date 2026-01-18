@@ -46,7 +46,7 @@ int main()
 
     auto cornersCV = SfM::detect::harrisCornerDetectionSubPixelOpenCv(img);
     auto startDetectCV = std::chrono::steady_clock::now();
-    SfM::detect::harrisCornerDetectionOpenCv(img);
+    SfM::detect::siftCv(img);
     std::cout << "Took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetectCV).count() << "ms" << std::endl;
 
     std::sort(cornersCV.begin(), cornersCV.end(),
@@ -58,7 +58,7 @@ int main()
     SfM::Image image = SfM::io::loadImage(path);
 
     std::vector<int> millis;
-    for (int _ = 0; _ < 20; _++)
+    for (int _ = 0; _ < 1; _++)
     {
         auto startDetect = std::chrono::steady_clock::now();
         auto corners = SfM::detect::harrisCornerDetection(image, 2);

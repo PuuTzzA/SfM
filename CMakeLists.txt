@@ -16,11 +16,10 @@ add_executable(SfM
     submodules/solve/scene.cpp
     submodules/test/generate.cpp
     submodules/util/util.cpp
-    # add more source files here
 )
 
-# If you need external libraries:
-find_package(OpenMP REQUIRED)
+find_package(TBB REQUIRED)
+find_package(OpenMP REQUIRED) 
 
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
@@ -42,9 +41,10 @@ target_include_directories(SfM
 
 target_link_libraries(SfM
     PRIVATE
+        TBB::tbb                
         OpenMP::OpenMP_CXX
         ${OpenCV_LIBS}
         Eigen3::Eigen
         Ceres::ceres
-        ${TURBOJPEG_LIBRARY}  # Link the library found above
+        ${TURBOJPEG_LIBRARY}
 )

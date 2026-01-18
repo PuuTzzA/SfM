@@ -31,7 +31,7 @@ namespace SfM::detect
             }
         }
 
-        //cv::imwrite("../../Data/corner.png", image);
+        // cv::imwrite("../../Data/corner.png", image);
 
         /* cv::imshow("dst", image);
 
@@ -121,6 +121,32 @@ namespace SfM::detect
         cv::imwrite("../../Data/subpixeltest.png", image);
 
         return eigenCorners;
+    }
+
+    void siftCv(cv::Mat &image)
+    {
+        // 1. Create the SIFT detector object
+        // SIFT::create() returns a smart pointer (cv::Ptr<cv::SIFT>)
+        cv::Ptr<cv::SIFT> sift = cv::SIFT::create();
+
+        // 2. Define containers for the results
+        std::vector<cv::KeyPoint> keypoints; // List of (x,y), size, angle, response
+        cv::Mat descriptors;                 // A matrix where each row is a descriptor
+
+        // 3. Detect and Compute
+        // Arguments:
+        //   1. Input Image
+        //   2. Mask (use cv::noArray() or cv::Mat() for "None")
+        //   3. Output Keypoints
+        //   4. Output Descriptors
+        sift->detectAndCompute(image, cv::noArray(), keypoints, descriptors);
+
+        // --- Optional: Visualization to verify it worked ---
+        cv::Mat output_img;
+        cv::drawKeypoints(image, keypoints, output_img, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        //cv::imshow("SIFT Keypoints", output_img);
+        cv::imwrite("../../Data/SIFT Keypoints OpenCv.png", output_img);
+        cv::waitKey(0);
     }
 
 } // Namespace SfM::detect

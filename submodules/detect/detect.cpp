@@ -5,42 +5,50 @@
 
 namespace SfM::detect
 {
+    template <typename T>
+    Image<T> rgbToREAL(const Image<uchar> &image)
+    {
+        Image<T> gray;
+        gray.data.resize(image.width * image.height);
+        gray.width = image.width;
+        gray.height = image.height;
+
+#pragma omp parallel for simd
+        for (int i = 0; i < image.width * image.height; i++)
+        {
+            int i2 = i * 3;
+            T r = static_cast<T>(image.data[i2]) / static_cast<T>(255);
+            T g = static_cast<T>(image.data[i2 + 1]) / static_cast<T>(255);
+            T b = static_cast<T>(image.data[i2 + 2]) / static_cast<T>(255);
+
+            gray.data[i] = 0.2125 * r + 0.7154 * g + 0.0721 * b; // Rec.709
+            // gray.data[i] = 0.299 * r + 0.587 * g + 0.114 * b; // Rec.601
+        }
+
+        return gray;
+    }
+
     std::vector<Vec2> harrisCornerDetection(const Image<uchar> &image, const int blockSize, const int maxIter, const REAL maxDelta)
     {
         using H_REAL = float;
 
         size_t length = image.width * image.height;
 
-        Image<H_REAL> gray;
-        gray.data.resize(length);
-        gray.width = image.width;
-        gray.height = image.height;
+        Image<H_REAL> gray = rgbToREAL<H_REAL>(image);
 
-#pragma omp parallel for simd
-        for (int i = 0; i < length; i++)
-        {
-            int i2 = i * 3;
-            H_REAL r = static_cast<H_REAL>(image.data[i2]) / static_cast<H_REAL>(255);
-            H_REAL g = static_cast<H_REAL>(image.data[i2 + 1]) / static_cast<H_REAL>(255);
-            H_REAL b = static_cast<H_REAL>(image.data[i2 + 2]) / static_cast<H_REAL>(255);
-
-            gray.data[i] = 0.2125 * r + 0.7154 * g + 0.0721 * b; // Rec.709
-            // gray.data[i] = 0.299 * r + 0.587 * g + 0.114 * b; // Rec.601
-        }
-
+        // Calculate derivatives using sobel with kSize = 3.
         std::vector<H_REAL> xx(length);
         std::vector<H_REAL> yy(length);
         std::vector<H_REAL> xy(length);
-// Calculate the harris respose
 #pragma omp parallel for
         for (int y = 1; y < image.height - 1; y++)
         {
+            int yOffset = y * image.width;
 #pragma omp simd
             for (int x = 1; x < image.width - 1; x++)
             {
-                int idx = y * image.width + x;
+                int idx = yOffset + x;
 
-                // Calculate derivatives using sobel with kSize = 3.
                 H_REAL dx = -gray.at(x - 1, y - 1) + gray.at(x + 1, y - 1)  //
                             - 2 * gray.at(x - 1, y) + 2 * gray.at(x + 1, y) //
                             - gray.at(x - 1, y + 1) + gray.at(x + 1, y + 1);
@@ -54,49 +62,36 @@ namespace SfM::detect
             }
         }
 
-        std::vector<H_REAL> xxS(length);
-        std::vector<H_REAL> yyS(length);
-        std::vector<H_REAL> xyS(length);
-        // Blur the derivatives
+        // Blur the derivatives and calculate the harris response
+        std::vector<H_REAL> harris(length);
+        H_REAL max = -std::numeric_limits<H_REAL>::max();
         int lowerBound = -(blockSize - 1) / 2;         // inclusive
         int upperBound = lowerBound + (blockSize - 1); // inclusive
-#pragma omp parallel for
+#pragma omp parallel for reduction(max : max)
         for (int y = -lowerBound; y < image.height - upperBound; y++)
         {
-#pragma omp simd
+            int yOffset = y * image.width;
+#pragma omp simd reduction(max : max)
             for (int x = -lowerBound; x < image.width - upperBound; x++)
             {
-                int idx = y * image.width + x;
+                int idx = yOffset + x;
 
-                xxS[idx] = 0;
-                yyS[idx] = 0;
-                xyS[idx] = 0;
+                H_REAL sumXx = 0;
+                H_REAL sumYy = 0;
+                H_REAL sumXy = 0;
                 for (int v = lowerBound; v <= upperBound; v++)
                 {
                     for (int u = lowerBound; u <= upperBound; u++)
                     {
                         int idx2 = (y + v) * image.width + (x + u);
-                        xxS[idx] += xx[idx2];
-                        yyS[idx] += yy[idx2];
-                        xyS[idx] += xy[idx2];
+                        sumXx += xx[idx2];
+                        sumYy += yy[idx2];
+                        sumXy += xy[idx2];
                     }
                 }
-            }
-        }
 
-        std::vector<H_REAL> harris(length);
-        H_REAL max = -std::numeric_limits<H_REAL>::max();
-        // Calculate the harris response
-#pragma omp parallel for reduction(max : max)
-        for (int y = 1; y < image.height - 1; y++)
-        {
-            for (int x = 1; x < image.width - 1; x++)
-            {
-                int idx = y * image.width + x;
-
-                H_REAL det = xxS[idx] * yyS[idx] - xyS[idx] * xyS[idx];
-                H_REAL tr = xxS[idx] + yyS[idx];
-
+                H_REAL det = sumXx * sumYy - sumXy * sumXy;
+                H_REAL tr = sumXx + sumYy;
                 // calculate the Harris activation R=det(M)−k(trace(M))^2
                 harris[idx] = det - 0.04 * (tr * tr);
                 // harris[idx] *= 255;
