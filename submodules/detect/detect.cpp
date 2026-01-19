@@ -1,40 +1,18 @@
 #include "detect.hpp"
 #include <iostream>
 #include "../io/file.hpp"
+#include "../util/util.hpp"
 #include <omp.h>
 
 namespace SfM::detect
 {
-    template <typename T>
-    Image<T> rgbToREAL(const Image<uchar> &image)
-    {
-        Image<T> gray;
-        gray.data.resize(image.width * image.height);
-        gray.width = image.width;
-        gray.height = image.height;
-
-#pragma omp parallel for simd
-        for (int i = 0; i < image.width * image.height; i++)
-        {
-            int i2 = i * 3;
-            T r = static_cast<T>(image.data[i2]) / static_cast<T>(255);
-            T g = static_cast<T>(image.data[i2 + 1]) / static_cast<T>(255);
-            T b = static_cast<T>(image.data[i2 + 2]) / static_cast<T>(255);
-
-            gray.data[i] = 0.2125 * r + 0.7154 * g + 0.0721 * b; // Rec.709
-            // gray.data[i] = 0.299 * r + 0.587 * g + 0.114 * b; // Rec.601
-        }
-
-        return gray;
-    }
-
     std::vector<Vec2> harrisCornerDetection(const Image<uchar> &image, const int blockSize, const int maxIter, const REAL maxDelta)
     {
         using H_REAL = float;
 
         size_t length = image.width * image.height;
 
-        Image<H_REAL> gray = rgbToREAL<H_REAL>(image);
+        Image<H_REAL> gray = util::rgbToREAL<H_REAL>(image);
 
         // Calculate derivatives using sobel with kSize = 3.
         std::vector<H_REAL> xx(length);
@@ -131,5 +109,14 @@ namespace SfM::detect
         // cv::imwrite("../../Data/______.png", cv);
 
         return {};
+    }
+
+    void SIFT(const Image<uchar> &image)
+    {
+        using S_REAL = float;
+
+        size_t length = image.width * image.height;
+
+        Image<S_REAL> gray = util::rgbToREAL<S_REAL>(image);
     }
 }

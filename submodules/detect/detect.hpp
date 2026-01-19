@@ -15,12 +15,10 @@ namespace SfM::detect
     std::vector<Vec2> harrisCornerDetection(const Image<uchar> &image, const int blockSize, const int maxIter = 100, const REAL maxDelta = 0.001);
 
     /**
-     * @brief Converts a rgb image to REAL.
-     * @param image rgb image
-     * @return image as REAL
+     * @brief Detects and computes SIFT keypoints.
+     * @param image Input rgb image
      */
-    template<typename T>
-    Image<T> rgbToREAL(const Image<uchar> &image);
+    void SIFT(const Image<uchar>& image);
 
     void harrisCornerDetectionOpenCv(cv::Mat &image);
 

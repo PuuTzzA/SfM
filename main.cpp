@@ -14,6 +14,89 @@
 
 int main()
 {
+    int W = 1920 * 2;
+    int H = 1080 * 2;
+
+    SfM::Image<float> img1;
+    img1.width = W;
+    img1.height = H;
+    img1.data.resize(W * H);
+
+    SfM::Image<float> img2;
+    img2.width = W;
+    img2.height = H;
+    img2.data.resize(W * H);
+
+    for (int i = 0; i < W * H; i++)
+    {
+        img1.data[i] = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+        img2.data[i] = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    }
+
+    std::vector<int> millis;
+    std::vector<int> millis2;
+    std::vector<int> millis3;
+    std::vector<int> millis4;
+    std::vector<int> millis5;
+    for (int _ = 0; _ < 100; _++)
+    {
+        auto startDetect = std::chrono::steady_clock::now();
+
+        auto img3 = SfM::util::sub<float>(img1, img2);
+
+        auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetect).count();
+        millis.push_back(dur);
+        std::cout << _ << ".1: Took " << dur << "ms" << std::endl;
+        delete (img3);
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        auto startDetect2 = std::chrono::steady_clock::now();
+
+        auto img4 = SfM::util::sub2(img1, img2);
+
+        auto dur2 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetect2).count();
+        millis2.push_back(dur2);
+        std::cout << _ << ".2: Took " << dur2 << "ms" << std::endl;
+        delete (img4);
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        auto startDetect3 = std::chrono::steady_clock::now();
+
+        auto img5 = SfM::util::sub3(img1, img2);
+
+        auto dur3 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetect3).count();
+        millis3.push_back(dur3);
+        std::cout << _ << ".3: Took " << dur3 << "ms" << std::endl;
+        delete (img5);
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        auto startDetect4 = std::chrono::steady_clock::now();
+
+        auto img6 = SfM::util::sub4(img1, img2);
+
+        auto dur4 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetect4).count();
+        millis4.push_back(dur4);
+        std::cout << _ << ".4: Took " << dur4 << "ms" << std::endl;
+        delete(img6);
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        auto startDetect5 = std::chrono::steady_clock::now();
+
+        auto img7 = SfM::util::sub5(img1, img2);
+
+        auto dur5 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startDetect5).count();
+        millis5.push_back(dur5);
+        std::cout << _ << ".5: Took " << dur5 << "ms" << std::endl;
+        delete(img7);
+    }
+
+    std::cout << "OpenMP1: average" << std::reduce(millis.begin(), millis.end()) / millis.size() << std::endl;
+    std::cout << "OpenMP2: average" << std::reduce(millis2.begin(), millis2.end()) / millis2.size() << std::endl;
+    std::cout << "TBB 1  : average" << std::reduce(millis3.begin(), millis3.end()) / millis3.size() << std::endl;
+    std::cout << "TBB 2  : average" << std::reduce(millis4.begin(), millis4.end()) / millis4.size() << std::endl;
+    std::cout << "Both   : average" << std::reduce(millis5.begin(), millis5.end()) / millis5.size() << std::endl;
+
+    return 0;
     std::string path = "../../Data/real_image.jpg";
 
     /*
@@ -42,7 +125,7 @@ int main()
          }
      } */
 
-    cv::Mat img = cv::imread(path);
+    /* cv::Mat img = cv::imread(path);
 
     auto cornersCV = SfM::detect::harrisCornerDetectionSubPixelOpenCv(img);
     auto startDetectCV = std::chrono::steady_clock::now();
@@ -67,7 +150,7 @@ int main()
         std::cout << _ << ": Took " << dur << "ms" << std::endl;
     }
 
-    std::cout << "average" << std::reduce(millis.begin(), millis.end()) / millis.size() << std::endl;
+    std::cout << "average" << std::reduce(millis.begin(), millis.end()) / millis.size() << std::endl; */
 
     /* std::sort(corners.begin(), corners.end(),
               [](const SfM::Vec2 &u, const SfM::Vec2 &v)
@@ -77,12 +160,12 @@ int main()
 
     // std::cout << "len of cornersCv: " << cornersCV.size() << ", len of corners: " << corners.size() << std::endl;
 
-    for (int i = 0; i < cornersCV.size(); i++)
-    {
-        auto c = cornersCV[i];
-        // std::cout << "cv: corner at: " << c[0] << ", " << 1080 - c[1] << std::endl;
-    }
-
+    /*  for (int i = 0; i < cornersCV.size(); i++)
+     {
+         auto c = cornersCV[i];
+         // std::cout << "cv: corner at: " << c[0] << ", " << 1080 - c[1] << std::endl;
+     }
+  */
     // SfM::detect::harrisCornerDetectionOpenCv(img);
 
     // std::cout << "OpenCV version: " << CV_VERSION << std::endl;
