@@ -18,11 +18,11 @@ namespace SfM::detect
      * @brief Detects and computes SIFT keypoints.
      * @param image Input rgb image
      */
-    void SIFT(const Image<uchar>& image);
+    void SIFT(const Image<uchar> &image);
 
     void harrisCornerDetectionOpenCv(cv::Mat &image);
 
     std::vector<Vec2> harrisCornerDetectionSubPixelOpenCv(cv::Mat &image);
 
-    void siftCv(cv::Mat& image);
+    void siftCv(cv::Mat &image);
 } // Namespace SfM::detect

@@ -18,19 +18,12 @@ namespace SfM::io
     Image<uchar> loadImage(const std::string &path, int turboJpegFlags = TJFLAG_ACCURATEDCT);
 
     /**
-     * @brief converts a OpenCv Matrix to a c++ std::vector<uchar>.
-     * @param mat cv::Mat
-     * @return std::vector of the image
-     */
-    std::vector<uchar> cvMatToVector(cv::Mat &mat);
-
-    /**
      * @brief Converts a struct Image to a cv::Mat.
      * @param image Input image
      * @return cv::Mat of the image (rgb if T == ucar, monochrome if T == REAL)
      */
-    template<typename T>
-    cv::Mat imageToCvMat(const Image<T>& image);
+    template <typename T>
+    cv::Mat imageToCvMat(const Image<T> &image);
 
     /**
      * @brief Reads tracked points from a file.

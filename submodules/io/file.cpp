@@ -22,39 +22,42 @@ namespace SfM::io
         if (!file)
         {
             std::cerr << "Failed to open file: " << path << std::endl;
-            return {};
+            return Image<uchar>(0, 0);
         }
         std::streamsize size = file.tellg();
         file.seekg(0, std::ios::beg);
-        std::vector<uchar> jpegBuffer(size);
-        if (!file.read((char *)jpegBuffer.data(), size))
-            return {};
+        uchar *jpegBuffer = new uchar[size];
+        if (!file.read((char *)jpegBuffer, size))
+        {
+            return Image<uchar>(0, 0);
+        }
 
         // Initialize Decompressor
         tjhandle decompressor = tjInitDecompress();
         int width, height, subsamp, colorspace;
 
         // Read Header
-        if (tjDecompressHeader3(decompressor, jpegBuffer.data(), size, &width, &height, &subsamp, &colorspace) < 0)
+        if (tjDecompressHeader3(decompressor, jpegBuffer, size, &width, &height, &subsamp, &colorspace) < 0)
         {
             tjDestroy(decompressor);
-            return {};
+            return Image<uchar>(0, 0);
         }
 
         // Allocate RGB Vector (3 bytes per pixel)
-        std::vector<uchar> pixels(width * height * 3);
+        Image<uchar> retImg(width, height, 3);
 
         // Decompress directly to vector
         // TJPF_RGB ensures standard RGB byte order
-        if (tjDecompress2(decompressor, jpegBuffer.data(), size, pixels.data(), width,
+        if (tjDecompress2(decompressor, jpegBuffer, size, retImg.data, width,
                           0, height, TJPF_RGB, flags) < 0)
         {
             tjDestroy(decompressor);
-            return {};
+            return Image<uchar>(0, 0);
         }
 
         tjDestroy(decompressor);
-        return {pixels, width, height};
+        delete[] jpegBuffer;
+        return retImg;
     }
 
     Image<uchar> loadImage(const std::string &path, int turboJpegFlags)
@@ -68,26 +71,44 @@ namespace SfM::io
         else
         {
             std::cout << "Loading image with OpenCv" << std::endl; // INFO: loadPNG was slower than OpenCV, therefore I removed it again
-
             cv::Mat img = cv::imread(path, cv::IMREAD_COLOR);
-            cv::cvtColor(img, img, cv::COLOR_BGR2RGB); // Convert BGR to RGB
+
             if (img.empty())
             {
                 std::cerr << "OpenCV failed to load: " << path << std::endl;
-                return {};
+                return Image<uchar>(0, 0);
             }
-            return {cvMatToVector(img), img.cols, img.rows};
+
+            cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+            Image<uchar> result(img.cols, img.rows, 3);
+
+            size_t totalBytes = img.cols * img.rows * 3 * sizeof(uchar);
+
+            if (img.isContinuous())
+            {
+                std::memcpy(result.data, img.data, totalBytes);
+            }
+            else
+            {
+                for (int y = 0; y < img.rows; ++y)
+                {
+                    std::memcpy(result.data + y * img.cols * 3, img.ptr<uchar>(y), img.cols * 3 * sizeof(uchar));
+                }
+            }
+
+            return result;
         }
     }
 
     template <>
     cv::Mat imageToCvMat<uchar>(const Image<uchar> &image)
     {
-        if (image.data.empty() || image.width <= 0 || image.height <= 0)
+        if (image.data == nullptr || image.width <= 0 || image.height <= 0)
         {
             return cv::Mat();
         }
-        cv::Mat wrappedMat(image.height, image.width, CV_8UC3, (void *)image.data.data());
+        std::cout << "moin: " << image.width << ", " << image.height << ", " << std::endl;
+        cv::Mat wrappedMat(image.height, image.width, CV_8UC3, (void *)image.data);
         cv::cvtColor(wrappedMat, wrappedMat, cv::COLOR_RGB2BGR);
         return wrappedMat.clone();
     }
@@ -95,53 +116,25 @@ namespace SfM::io
     template <>
     cv::Mat imageToCvMat<float>(const Image<float> &image)
     {
-        if (image.data.empty() || image.width <= 0 || image.height <= 0)
+        if (image.data == nullptr || image.width <= 0 || image.height <= 0)
         {
             return cv::Mat();
         }
 
-        cv::Mat wrapped(image.height, image.width, CV_32FC1, (void *)image.data.data());
+        cv::Mat wrapped(image.height, image.width, CV_32FC1, (void *)image.data);
         return wrapped.clone();
     }
 
     template <>
     cv::Mat imageToCvMat<double>(const Image<double> &image)
     {
-        if (image.data.empty() || image.width <= 0 || image.height <= 0)
+        if (image.data == nullptr || image.width <= 0 || image.height <= 0)
         {
             return cv::Mat();
         }
 
-        cv::Mat wrapped(image.height, image.width, CV_64FC1, (void *)image.data.data());
+        cv::Mat wrapped(image.height, image.width, CV_64FC1, (void *)image.data);
         return wrapped.clone();
-    }
-
-    std::vector<uchar> cvMatToVector(cv::Mat &mat)
-    {
-        if (mat.empty())
-        {
-            return std::vector<uchar>();
-        }
-
-        // 2. Handle memory continuity
-        // If the matrix is a Region of Interest (ROI) or has padding, the memory
-        // is not continuous. We must make it continuous to copy it into a flat vector.
-        // Since 'mat' is an rvalue reference (&&), we can modify it or clone it
-        // internally without affecting the caller's "original" variable (which is dying anyway).
-        if (!mat.isContinuous())
-        {
-            mat = mat.clone();
-        }
-
-        // 3. Calculate total bytes
-        // total() returns the number of pixels.
-        // elemSize() returns the number of bytes per pixel (e.g., 3 for CV_8UC3, 4 for float).
-        size_t sizeInBytes = mat.total() * mat.elemSize();
-
-        // 4. Copy data to vector
-        // We use the pointer to the start of the data and the calculated size.
-        // std::vector copies the data into its own managed memory.
-        return std::vector<uchar>(mat.data, mat.data + sizeInBytes);
     }
 
     std::vector<std::vector<Vec2>> loadTrackedPoints(const std::string &path)

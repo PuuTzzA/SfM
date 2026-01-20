@@ -1,6 +1,7 @@
 #pragma once
 #include <Eigen/Dense>
 #include <vector>
+#include <memory>
 
 namespace SfM
 {
@@ -20,20 +21,65 @@ namespace SfM
 
     /**
      * @brief Wrapper for an image.
-     * @param data Holds the image data in a std::vector<uchar>. The data is stored in the following way [T1, T2, T3, ...] from top left to bottom right row by row.
+     * @param data Holds the image data in a T*. The data is stored in the following way [T1, T2, T3, ...] from top left to bottom right row by row.
      * If T is uchar then it is [r1, g1, b1, r2, g2, b2, ...]
      * @param width Width of the image
      * @param height Height of the image
      */
     template <typename T>
-    struct Image
+    class Image
     {
+    public:
+        Image(int w, int h) : width{w}, height{h}
+        {
+            data = new T[w * h];
+        }
+
+        Image(int w, int h, int dim): width{w}, height{h}
+        {
+            data = new T[w * h * dim];
+        }
+
+        ~Image()
+        {
+            delete[] data;
+        }
+
         inline T &at(int x, int y)
         {
             return data[y * width + x];
         }
 
-        std::vector<T> data;
+        // Move semantics for efficient returns.
+        Image(Image &&other) noexcept
+            : data(other.data), width(other.width), height(other.height)
+        {
+            other.data = nullptr;
+            other.width = 0;
+            other.height = 0;
+        }
+
+        Image &operator=(Image &&other) noexcept
+        {
+            if (this != &other)
+            {
+                delete[] data; // Free current data
+
+                data = other.data;
+                width = other.width;
+                height = other.height;
+
+                other.data = nullptr;
+                other.width = 0;
+                other.height = 0;
+            }
+            return *this;
+        }
+
+        Image(const Image &) = delete;
+        Image &operator=(const Image &) = delete;
+
+        T *data; // Use T* instead of std::vector<T> because I want to malloc without initializing the data which that takes a long time 
         int width;
         int height;
     };

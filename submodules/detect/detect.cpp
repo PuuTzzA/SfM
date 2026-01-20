@@ -15,9 +15,9 @@ namespace SfM::detect
         Image<H_REAL> gray = util::rgbToREAL<H_REAL>(image);
 
         // Calculate derivatives using sobel with kSize = 3.
-        std::vector<H_REAL> xx(length);
-        std::vector<H_REAL> yy(length);
-        std::vector<H_REAL> xy(length);
+        H_REAL *xx = new H_REAL[length];
+        H_REAL *yy = new H_REAL[length];
+        H_REAL *xy = new H_REAL[length];
 #pragma omp parallel for
         for (int y = 1; y < image.height - 1; y++)
         {
@@ -41,7 +41,7 @@ namespace SfM::detect
         }
 
         // Blur the derivatives and calculate the harris response
-        std::vector<H_REAL> harris(length);
+        Image<H_REAL> harris(image.width, image.height);
         H_REAL max = -std::numeric_limits<H_REAL>::max();
         int lowerBound = -(blockSize - 1) / 2;         // inclusive
         int upperBound = lowerBound + (blockSize - 1); // inclusive
@@ -71,12 +71,12 @@ namespace SfM::detect
                 H_REAL det = sumXx * sumYy - sumXy * sumXy;
                 H_REAL tr = sumXx + sumYy;
                 // calculate the Harris activation R=det(M)−k(trace(M))^2
-                harris[idx] = det - 0.04 * (tr * tr);
+                harris.data[idx] = det - 0.04 * (tr * tr);
                 // harris[idx] *= 255;
 
-                if (harris[idx] > max)
+                if (harris.data[idx] > max)
                 {
-                    max = harris[idx];
+                    max = harris.data[idx];
                 }
             }
         }
@@ -91,23 +91,24 @@ namespace SfM::detect
             {
                 int idx = y * image.width + x;
 
-                if (harris[idx] > max * 0.01)
+                if (harris.data[idx] > max * 0.01)
                 {
-                    harris[idx] = 255;
+                    harris.data[idx] = 255;
                 }
                 else
                 {
-                    harris[idx] = gray.at(x, y) * 255;
+                    harris.data[idx] = gray.at(x, y) * 255;
                 }
             }
         }
 
-        // gray.data = harris;
-        // auto cv = io::imageToCvMat(gray);
+        // auto cv = io::imageToCvMat(harris);
         // cv::dilate(cv, cv, cv::Mat());
-
         // cv::imwrite("../../Data/______.png", cv);
 
+        delete[] xx;
+        delete[] yy;
+        delete[] xy;
         return {};
     }
 
