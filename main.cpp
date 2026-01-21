@@ -14,6 +14,11 @@
 
 int main()
 {
+    // Testing
+    // auto images = SfM::io::loadImages("../calibration_data/test_dir");
+    // std::cout << "image count: " << images.size() << std::endl;
+
+
     // std::string path = "../../Data/real_image.jpg";
     std::string path = "../../Data/calibration.jpg";
 

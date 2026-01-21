@@ -15,7 +15,7 @@ namespace SfM::calibrate {
         Vec2 opticalCenters;
 
         /**
-         * @returns Mat3 representing the intrinsic matrix of the camera
+         * @returns Mat3 representing the intrinsic matrix of the camera.
          */
         inline Mat3 getMatrix() {
             Mat3 m;
@@ -23,4 +23,4 @@ namespace SfM::calibrate {
             return m;
         }
     }
-}
+} // namespace Sfm::calibrate

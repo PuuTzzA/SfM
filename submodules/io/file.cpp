@@ -3,6 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 
 namespace SfM::io
 {
@@ -284,5 +285,35 @@ namespace SfM::io
 
         // Save output
         cv::imwrite(outputPath, collage);
+    }
+
+    std::vector<cv::Mat> loadImages(std::string dir) {
+        std::vector<cv::Mat> images{};
+
+        std::filesystem::path dir_path{dir};
+
+        auto validExtension = [] (const std::string& ext) {
+            return ext == ".png" || ext == ".jpeg" || ext == ".jpg";
+        };
+
+        for(const auto& dir_entry : std::filesystem::directory_iterator{dir_path}) {
+            auto entry_path = dir_entry.path();
+
+            if(dir_entry.is_directory() || !validExtension(entry_path.extension().string()))
+                continue;
+
+            std::cout << "Loading image file '" << entry_path << "'" << std::endl;
+            cv::Mat image = cv::imread(entry_path.string(), cv::IMREAD_COLOR);
+
+            if (image.empty())
+            {
+                std::cerr << "OpenCV failed to load file '" << entry_path << "'. Ignored!" << std::endl;
+                continue;
+            }
+
+            images.push_back(image);
+        }
+
+        return images;
     }
 } // Namespace SfM::io

@@ -71,4 +71,12 @@ namespace SfM::io
                                int endFrame,
                                const std::string &outputPath,
                                int markerSize = 5);
+
+    /**
+     * @brief Loads all images inside a directory. Only files with the extension ".png", ".jpeg" or ".jpg" will be loaded.
+     *
+     * @param dir Path to the directory containing the images.
+     * @return An std::vector of all the loaded images.
+     */
+    std::vector<cv::Mat> loadImages(std::string dir);
 } // namespace SfM::io
