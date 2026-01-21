@@ -17,6 +17,8 @@ namespace SfM
     using Mat4 = Eigen::Matrix<REAL, 4, 4>;
     using MatX = Eigen::Matrix<REAL, Eigen::Dynamic, Eigen::Dynamic>;
 
+    using Vec2I = Eigen::Matrix<int, 2, 1>;
+
     constexpr REAL EPSILON = static_cast<REAL>(1e-7);
 
     /**
@@ -35,6 +37,9 @@ namespace SfM
             data = new T[w * h];
         }
 
+        /**
+         * @brief Use this if you have multiple channels per pixel, e.g. rgb
+         */
         Image(int w, int h, int dim): width{w}, height{h}
         {
             data = new T[w * h * dim];

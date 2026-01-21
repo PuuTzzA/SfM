@@ -107,7 +107,6 @@ namespace SfM::io
         {
             return cv::Mat();
         }
-        std::cout << "moin: " << image.width << ", " << image.height << ", " << std::endl;
         cv::Mat wrappedMat(image.height, image.width, CV_8UC3, (void *)image.data);
         cv::cvtColor(wrappedMat, wrappedMat, cv::COLOR_RGB2BGR);
         return wrappedMat.clone();
@@ -120,7 +119,7 @@ namespace SfM::io
         {
             return cv::Mat();
         }
-
+        std::cout << "IMG to cv mat" << std::endl;
         cv::Mat wrapped(image.height, image.width, CV_32FC1, (void *)image.data);
         return wrapped.clone();
     }

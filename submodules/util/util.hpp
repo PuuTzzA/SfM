@@ -230,4 +230,213 @@ namespace SfM::util
 
         return outImg;
     }
+
+    /**
+     * @brief Element wise multiplication. Not in place.
+     */
+    template <typename T>
+    inline Image<T> mulScalar(const Image<T> &a, T scalar)
+    {
+        Image<T> outImg(a.width, a.height);
+
+        tbb::parallel_for(tbb::blocked_range<int>(0, a.height),
+                          [&](const tbb::blocked_range<int> &r)
+                          {
+                              for (int y = r.begin(); y != r.end(); ++y)
+                              {
+                                  int yOffset = y * a.width;
+#pragma omp simd
+                                  for (int x = 0; x < a.width; x++)
+                                  {
+                                      int idx = yOffset + x;
+                                      outImg.data[idx] = a.data[idx] * scalar;
+                                  }
+                              }
+                          });
+
+        return outImg;
+    }
+
+    /**
+     * @brief Returns a vector containing the 1D kernel weights
+     */
+    template <typename T>
+    inline std::vector<T> createGaussianKernel(REAL sigma, int order)
+    {
+        int radius = static_cast<int>(4.0 * sigma + 0.5);
+        int size = 2 * radius + 1;
+
+        std::vector<T> kernel;
+        kernel.reserve(size);
+        T sum = 0;
+        T sigmaSqr = sigma * sigma;
+        T twoSigmaSqr = 2 * sigmaSqr;
+
+        for (int x = -radius; x <= radius; x++)
+        {
+            REAL g = std::exp(-(x * x) / twoSigmaSqr);
+
+            if (order == 0) // Zeroth derivative = Gaussian function
+            {
+                kernel.push_back(g);
+                sum += g;
+            }
+            else if (order == 1) // First derivative
+            {
+                kernel.push_back(-(x / sigmaSqr) * g);
+            }
+            // Higher derivatives go here
+        }
+
+        if (order == 0 && std::abs(sum) > EPSILON)
+        {
+            // Normalize values. Only for order = 0
+            for (int i = 0; i < size; i++)
+            {
+                kernel[i] /= sum;
+            }
+        }
+
+        return kernel;
+    }
+
+    /**
+     * @brief Computes the gaussian blur of an Image<T>
+     * @param image Image to be blurred
+     * @param sigma (sigmaX, sigmaY) sigmas for the axis
+     * @param order (orderX, orderY) orders of the derivative used in the convolution (0 = normal gaussian blur). Only 0 or 1 supported for now.
+     * @return Returns blurred Image<T>
+     */
+    template <typename T>
+    inline Image<T> gaussianBlur(const Image<T> &image, Vec2 sigma, Vec2I order = Vec2I(0, 0))
+    {
+        if ((order[0] != 0 && order[0] != 1) || (order[1] != 0 && order[1] != 1))
+        {
+            std::cerr << "GAUSSIAN BLUR: Order has to be 0 or 1, was: " << order[0] << ", " << order[1] << std::endl;
+            return Image<T>(0, 0);
+        }
+
+        auto kernelX = createGaussianKernel<T>(sigma[0], order[0]);
+        int radiusX = (kernelX.size() - 1) / 2;
+        auto kernelY = createGaussianKernel<T>(sigma[1], order[1]);
+        int radiusY = (kernelY.size() - 1) / 2;
+
+        T *temp = new T[image.width * image.height];
+        Image<T> outImg(image.width, image.height);
+
+        // Horizontal Convolution
+        for (int y = 0; y < image.height; y++)
+        {
+            int yOffset = y * image.width;
+            for (int x = 0; x < image.width; x++)
+            {
+                T val = 0;
+
+                for (int r = -radiusX; r <= radiusX; r++)
+                {
+                    int xOffset = std::clamp(x + r, 0, image.width - 1);
+                    val += kernelX[r + radiusX] * image.data[yOffset + xOffset];
+                }
+
+                temp[yOffset + x] = val;
+            }
+        }
+
+        // Vertical Convolution
+        for (int x = 0; x < image.width; x++)
+        {
+            for (int y = 0; y < image.height; y++)
+            {
+                T val = 0;
+
+                for (int r = -radiusY; r <= radiusY; r++)
+                {
+                    int yOffset = std::clamp(y + r, 0, image.height - 1);
+                    val += kernelY[r + radiusY] * temp[yOffset * image.width + x];
+                }
+
+                outImg.data[y * image.width + x] = val;
+            }
+        }
+
+        delete[] temp;
+        return outImg;
+    }
+
+    /**
+     * @brief Computes the gaussian blur of an Image<uchar>
+     * @param image Image to be blurred
+     * @param sigma (sigmaX, sigmaY) sigmas for the axis
+     * @param order (orderX, orderY) orders of the derivative used in the convolution (0 = normal gaussian blur). Only 0 or 1 supported for now.
+     * @return Returns blurred Image<T>
+     */
+    template <>
+    inline Image<uchar> gaussianBlur(const Image<uchar> &image, Vec2 sigma, Vec2I order)
+    {
+        if (order[0] != 0 || order[1] != 0)
+        {
+            std::cerr << "GAUSSIAN BLUR: Order has to be 0 for Image<uchar>! Was: " << order[0] << ", " << order[1] << std::endl;
+            std::cerr << "GAUSSIAN BLUR: Use REAL for derivatives." << std::endl;
+            return Image<uchar>(0, 0);
+        }
+
+        auto kernelX = createGaussianKernel<REAL>(sigma[0], order[0]);
+        int radiusX = (kernelX.size() - 1) / 2;
+        auto kernelY = createGaussianKernel<REAL>(sigma[1], order[1]);
+        int radiusY = (kernelY.size() - 1) / 2;
+
+        REAL *temp = new REAL[image.width * image.height * 3];
+        Image<uchar> outImg(image.width, image.height, 3);
+
+        // Horizontal Convolution
+        for (int y = 0; y < image.height; y++)
+        {
+            int yOffset = y * image.width;
+            for (int x = 0; x < image.width; x++)
+            {
+                REAL valR = 0;
+                REAL valG = 0;
+                REAL valB = 0;
+
+                for (int r = -radiusX; r <= radiusX; r++)
+                {
+                    int xOffset = std::clamp(x + r, 0, image.width - 1);
+                    valR += kernelX[r + radiusX] * static_cast<REAL>(image.data[3 * (yOffset + xOffset)]);
+                    valG += kernelX[r + radiusX] * static_cast<REAL>(image.data[3 * (yOffset + xOffset) + 1]);
+                    valB += kernelX[r + radiusX] * static_cast<REAL>(image.data[3 * (yOffset + xOffset) + 2]);
+                }
+
+                temp[3 * (yOffset + x)] = valR;
+                temp[3 * (yOffset + x) + 1] = valG;
+                temp[3 * (yOffset + x) + 2] = valB;
+            }
+        }
+
+        // Vertical Convolution
+        for (int x = 0; x < image.width; x++)
+        {
+            for (int y = 0; y < image.height; y++)
+            {
+                REAL valR = 0;
+                REAL valG = 0;
+                REAL valB = 0;
+
+                for (int r = -radiusY; r <= radiusY; r++)
+                {
+                    int yOffset = std::clamp(y + r, 0, image.height - 1);
+                    valR += kernelY[r + radiusX] * temp[3 * (yOffset * image.width + x)];
+                    valG += kernelY[r + radiusX] * temp[3 * (yOffset * image.width + x) + 1];
+                    valB += kernelY[r + radiusX] * temp[3 * (yOffset * image.width + x) + 2];
+                }
+
+                outImg.data[3 * (y * image.width + x)] = static_cast<uchar>(valR);
+                outImg.data[3 * (y * image.width + x) + 1] = static_cast<uchar>(valG);
+                outImg.data[3 * (y * image.width + x) + 2] = static_cast<uchar>(valB);
+            }
+        }
+
+        delete[] temp;
+        return outImg;
+    }
+
 } // Namespace SfM::util
