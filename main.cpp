@@ -1,4 +1,5 @@
 #include <iostream>
+#include "submodules/calibrate/calibrate.hpp"
 #include "submodules/detect/detect.hpp"
 #include "submodules/io/file.hpp"
 #include "submodules/solve/solve.hpp"
@@ -15,8 +16,10 @@
 int main()
 {
     // Testing
-    // auto images = SfM::io::loadImages("../calibration_data/test_dir");
-    // std::cout << "image count: " << images.size() << std::endl;
+    auto images = SfM::io::loadImages("../calibration_data/test_dir");
+    std::cout << "image count: " << images.size() << std::endl;
+
+    SfM::calibrate::calibrateCamera(images);
 
 
     // std::string path = "../../Data/real_image.jpg";

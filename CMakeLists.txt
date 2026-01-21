@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(SfM 
     main.cpp
+    submodules/calibrate/calibrate.cpp
     submodules/detect/detect.cpp
     submodules/detect/detectOpenCv.cpp
     submodules/io/file.cpp
