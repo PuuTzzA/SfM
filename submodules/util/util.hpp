@@ -324,10 +324,12 @@ namespace SfM::util
         T *temp = new T[image.width * image.height];
         Image<T> outImg(image.width, image.height);
 
-        // Horizontal Convolution
+// Horizontal Convolution
+#pragma omp parallel for
         for (int y = 0; y < image.height; y++)
         {
             int yOffset = y * image.width;
+#pragma omp parallel for simd
             for (int x = 0; x < image.width; x++)
             {
                 T val = 0;
@@ -342,9 +344,11 @@ namespace SfM::util
             }
         }
 
-        // Vertical Convolution
+// Vertical Convolution
+#pragma omp parallel for
         for (int x = 0; x < image.width; x++)
         {
+#pragma omp parallel for simd
             for (int y = 0; y < image.height; y++)
             {
                 T val = 0;
@@ -388,10 +392,12 @@ namespace SfM::util
         REAL *temp = new REAL[image.width * image.height * 3];
         Image<uchar> outImg(image.width, image.height, 3);
 
-        // Horizontal Convolution
+// Horizontal Convolution
+#pragma omp parallel for
         for (int y = 0; y < image.height; y++)
         {
             int yOffset = y * image.width;
+#pragma omp parallel for simd
             for (int x = 0; x < image.width; x++)
             {
                 REAL valR = 0;
@@ -412,9 +418,11 @@ namespace SfM::util
             }
         }
 
-        // Vertical Convolution
+// Vertical Convolution
+#pragma omp parallel for
         for (int x = 0; x < image.width; x++)
         {
+#pragma omp parallel for simd
             for (int y = 0; y < image.height; y++)
             {
                 REAL valR = 0;
@@ -424,9 +432,9 @@ namespace SfM::util
                 for (int r = -radiusY; r <= radiusY; r++)
                 {
                     int yOffset = std::clamp(y + r, 0, image.height - 1);
-                    valR += kernelY[r + radiusX] * temp[3 * (yOffset * image.width + x)];
-                    valG += kernelY[r + radiusX] * temp[3 * (yOffset * image.width + x) + 1];
-                    valB += kernelY[r + radiusX] * temp[3 * (yOffset * image.width + x) + 2];
+                    valR += kernelY[r + radiusY] * temp[3 * (yOffset * image.width + x)];
+                    valG += kernelY[r + radiusY] * temp[3 * (yOffset * image.width + x) + 1];
+                    valB += kernelY[r + radiusY] * temp[3 * (yOffset * image.width + x) + 2];
                 }
 
                 outImg.data[3 * (y * image.width + x)] = static_cast<uchar>(valR);
@@ -438,5 +446,4 @@ namespace SfM::util
         delete[] temp;
         return outImg;
     }
-
 } // Namespace SfM::util

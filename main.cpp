@@ -18,15 +18,16 @@ int main()
     std::string path = "../../Data/calibration.jpg";
 
     SfM::Image<uchar> immg = SfM::io::loadImage(path);
-    // SfM::Image<float> immggray = SfM::util::rgbToREAL<float>(immg);
+    SfM::Image<float> immggray = SfM::util::rgbToREAL<float>(immg);
     auto s = std::chrono::steady_clock::now();
 
-    auto blurred = SfM::util::gaussianBlur(immg, SfM::Vec2(50, 50));
+    auto blurred = SfM::util::gaussianBlur(immggray, SfM::Vec2(5, 5));
 
     auto d = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - s).count();
+
     std::cout << "Took " << d << "ms" << std::endl;
 
-    // blurred = SfM::util::mulScalar(blurred, static_cast<float>(255));
+    blurred = SfM::util::mulScalar(blurred, static_cast<float>(255));
 
     auto cv = SfM::io::imageToCvMat(blurred);
     cv::imwrite("../../Data/______blurred.png", cv);
