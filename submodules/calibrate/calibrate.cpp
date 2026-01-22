@@ -41,10 +41,6 @@ namespace SfM::calibrate {
 
             imagePointsList.push_back(corners);
             objectPointsList.push_back(objectPoints);
-
-            cv::drawChessboardCorners(image, boardSize, corners, found);
-            cv::imshow("Corners", image);
-            cv::waitKey(100);
         }
 
         CameraCalibration calibration{};
@@ -65,6 +61,13 @@ namespace SfM::calibrate {
         std::cout << "Distortion Coefficients:\n" << calibration.distortionCoeffs << std::endl;
 
         return calibration;
+    }
+
+    cv::Mat undistort(const cv::Mat& image, const CameraCalibration& calibration) {
+        cv::Mat undistorted;
+        cv::undistort(image, undistorted, calibration.matrix, calibration.distortionCoeffs);
+        
+        return undistorted;
     }
 
 } // namespace SfM::calibrate

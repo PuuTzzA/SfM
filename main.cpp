@@ -19,7 +19,11 @@ int main()
     auto images = SfM::io::loadImages("../calibration_data/test_dir");
     std::cout << "image count: " << images.size() << std::endl;
 
-    SfM::calibrate::calibrateCamera(images);
+    auto calibration = SfM::calibrate::calibrateCamera(images);
+
+    cv::imshow("Distorted", images[0]);
+    cv::imshow("Undistorted", SfM::calibrate::undistort(images[0], calibration));
+    cv::waitKey(0);
 
 
     // std::string path = "../../Data/real_image.jpg";
