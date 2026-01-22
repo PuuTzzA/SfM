@@ -56,10 +56,6 @@ namespace SfM::calibrate {
             tvecs
         );
 
-        std::cout << "RMS reprojection error: " << rms << std::endl;
-        std::cout << "Camera Matrix:\n" << calibration.matrix << std::endl;
-        std::cout << "Distortion Coefficients:\n" << calibration.distortionCoeffs << std::endl;
-
         return calibration;
     }
 
