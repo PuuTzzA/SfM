@@ -1,4 +1,5 @@
 #include <iostream>
+#include "submodules/calibrate/calibrate.hpp"
 #include "submodules/detect/detect.hpp"
 #include "submodules/io/file.hpp"
 #include "submodules/solve/solve.hpp"
@@ -24,6 +25,18 @@ int main()
     SfM::detect::SIFTOpenCv(frame2);
 
     return 0;
+    /*  // Testing
+     auto images = SfM::io::loadImages("../calibration_data/test_dir");
+     std::cout << "image count: " << images.size() << std::endl;
+
+     SfM::io::storeCalibration("../calibration_data/test_dir/calib.json", SfM::calibrate::calibrateCamera(images));
+
+     auto calibration = SfM::io::loadCalibration("../calibration_data/test_dir/calib.json");
+
+     // SfM::io::storeCalibration("../calibration_data/test_dir/calib.json", calibration);
+
+     std::cout << "Camera Matrix:\n" << calibration.matrix << std::endl;
+     std::cout << "Distortion Coefficients:\n" << calibration.distortionCoeffs << std::endl; */
 
     // std::string path = "../../Data/real_image.jpg";
     std::string path = "../../Data/calibration.jpg";
