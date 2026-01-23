@@ -92,54 +92,6 @@ namespace SfM::solve
     std::vector<int> RANSAC(const std::vector<Vec2> &x, const std::vector<Vec2> &y, const Mat3 &K, const RANSAC_OPTIONS &options);
 
     /**
-     * @brief Represents a scene with a vector of extrinsics and 3d points.
-     * New frames can be added to the scene with the addFrame method, which calculates
-     * the new pose and 3d points with the eight point algorithm.
-     */
-    class Scene
-    {
-    public:
-        Scene() = default;
-        Scene(const Mat3 K, const Mat4 startTransform, bool useRANSAC, RANSAC_OPTIONS RANSAC_options);
-        void setK(const Mat3 K);
-        void setStartTransform(const Mat4 startTransform);
-        void setUseRANSAC(bool useRANSAC);
-        void setRANSACOptions(RANSAC_OPTIONS RANSAC_options);
-
-        void initializeFromFirstFrame(Frame &&frame, const int numTotTracks);
-        void addFrame(Frame &&frame, const int newNumTotTracks);
-
-        std::vector<Mat4> getExtrinsics();
-        std::vector<Vec3> get3dPoints();
-
-    private:
-        Vec2 normalizePoints(Vec2 pixel);
-
-        Mat3 m_K = Mat3::Identity();
-        Mat3 m_K_inv = Mat3::Identity();
-        std::vector<Frame> m_frames;
-        std::vector<Mat4> m_extrinsics;
-        std::vector<Vec3> m_points3d; // Stores the 3d approximation in a vector with the approximation of a point with trackId i being on position i
-        bool m_useRANSAC = false;
-        RANSAC_OPTIONS m_RANSAC_options = {};
-
-        // Values that are needed from the old frame to match the new one
-        std::vector<Vec2> m_shared12points1;
-        std::vector<Vec2> m_shared12points2;
-
-        std::vector<Vec2> m_shared23points2;
-        std::vector<Vec2> m_shared23points3;
-
-        std::vector<int> m_trackIndices12;
-        std::vector<int> m_trackIndices23;
-
-        REAL m_accumulatedScale = static_cast<REAL>(1.);
-        Mat4 m_accumulatedPose = Mat4::Identity();
-        EightPointResult m_frame12 = {};
-        EightPointResult m_frame23 = {};
-    };
-
-    /**
      * @brief Calculates the reprojection error of a 3d point given the NORMALIZED observation, viewMatrix and the intrinsics
      * @return Squared distance
      */

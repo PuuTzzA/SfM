@@ -1,12 +1,12 @@
-#include "solve.hpp"
-#include "../util/util.hpp"
+#include "scene.hpp"
+#include "./util/util.hpp"
 #include <Eigen/SVD>
 #include <iostream>
 #include <unordered_set>
 
-namespace SfM::solve
+namespace SfM
 {
-    Scene::Scene(const Mat3 K, const Mat4 startTransform, bool useRANSAC, RANSAC_OPTIONS RANSAC_options)
+    Scene::Scene(const Mat3 K, const Mat4 startTransform, bool useRANSAC, solve::RANSAC_OPTIONS RANSAC_options)
         : m_K{K}, m_K_inv{K.inverse()}, m_accumulatedPose{startTransform}, m_useRANSAC{useRANSAC}, m_RANSAC_options{RANSAC_options} {};
 
     void Scene::setK(const Mat3 K)
@@ -25,7 +25,7 @@ namespace SfM::solve
         m_useRANSAC = useRANSAC;
     };
 
-    void Scene::setRANSACOptions(RANSAC_OPTIONS RANSAC_options)
+    void Scene::setRANSACOptions(solve::RANSAC_OPTIONS RANSAC_options)
     {
         m_RANSAC_options = RANSAC_options;
     };
@@ -122,11 +122,11 @@ namespace SfM::solve
         // Calculate new pose and points
         if (!m_useRANSAC)
         {
-            m_frame23 = eightPointAlgorithm(m_shared23points2, m_shared23points3);
+            m_frame23 = solve::eightPointAlgorithm(m_shared23points2, m_shared23points3);
         }
         else
         {
-            auto inliers = RANSAC(m_shared23points2, m_shared23points3, m_K, m_RANSAC_options);
+            auto inliers = solve::RANSAC(m_shared23points2, m_shared23points3, m_K, m_RANSAC_options);
 
             if (inliers.size() >= 8)
             {
@@ -141,7 +141,7 @@ namespace SfM::solve
                     inliersTrackIndeces.push_back(m_trackIndices23[i]);
                 }
 
-                m_frame23 = eightPointAlgorithm(inliers1, inliers2);
+                m_frame23 = solve::eightPointAlgorithm(inliers1, inliers2);
 
                 m_shared23points2 = std::move(inliers1);
                 m_shared23points3 = std::move(inliers2);
@@ -150,7 +150,7 @@ namespace SfM::solve
             else
             {
                 std::cerr << "RANSAC failed to find 8 inliers. Using all points." << std::endl;
-                m_frame23 = eightPointAlgorithm(m_shared23points2, m_shared23points3);
+                m_frame23 = solve::eightPointAlgorithm(m_shared23points2, m_shared23points3);
             }
         }
 
@@ -238,4 +238,4 @@ namespace SfM::solve
         Vec3 ray = m_K_inv * p_homog;
         return Vec2(ray[0], ray[1]);
     };
-} // Namespace SfM::solve
+} // Namespace SfM

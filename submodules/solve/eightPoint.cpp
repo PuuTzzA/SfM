@@ -1,4 +1,5 @@
 #include "solve.hpp"
+#include "../scene.hpp"
 #include "../util/util.hpp"
 #include <Eigen/SVD>
 #include <iostream>
@@ -8,7 +9,7 @@ namespace SfM::solve
 {
     SfMResult eightPointAlgorithm(std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const Mat4 startTransform)
     {
-        Scene scene;
+        SfM::Scene scene;
         scene.setK(K);
         scene.setStartTransform(startTransform);
         scene.setUseRANSAC(true);

@@ -1,5 +1,6 @@
 #pragma once
 #include "../SfM.hpp"
+#include <functional>
 #include <opencv2/opencv.hpp>
 
 namespace SfM::match
@@ -11,14 +12,51 @@ namespace SfM::match
      */
     Frame createFirstFrameFromKeypoints(std::vector<Keypoint> &keypoints);
 
+    using similarityFunction = std::function<float(const std::vector<float> &, const std::vector<float> &)>;
+
     /**
-     * @brief Creates a new frame by matching keypoints to a existing frame
-     * The matching is performed on a two-sided
-     * @param frame0 Previous already matched frame
-     * @param keypoints1 New vector of keypoints
-     * @return Tuple of <Frame matched to the previous one, amount of not matched keypoints i.e. new trackIds>
+     * @brief Computes the dot product of two vectors
      */
-    std::tuple<Frame, int> matchTwoSided(Frame &frame0, std::vector<Keypoint> &keypoints1);
+    inline float dotProduct(const std::vector<float> &a, const std::vector<float> &b)
+    {
+        float result = 0.0f;
+
+        for (size_t i = 0; i < a.size(); ++i)
+        {
+            result += a[i] * b[i];
+        }
+        return result;
+    }
+
+    /**
+     * @brief Computs the cosine similarity of two vectors
+     */
+    inline float cosineSimilarity(const std::vector<float> &a, const std::vector<float> &b)
+    {
+        float dot = 0.0f;
+        float normA = 0.0f;
+        float normB = 0.0f;
+
+        for (size_t i = 0; i < a.size(); ++i)
+        {
+            dot += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
+        }
+
+        return dot / (std::sqrt(normA) * std::sqrt(normB));
+    }
+
+    /**
+     * @brief Finds matching keypoints between frames
+     * The matching is performed on a two-sided
+     * @param keypoints1 Vector of keypoints to match
+     * @param keypoints2 Vector of keypoints to match
+     * @param threshhold Min similarity score 
+     * @param similarityFunction Function that computes a similarity measure between two vectors (default cosine similarity)
+     * @return Vector of matches (<int, int> = index in first, index in second)
+     */
+    std::vector<std::tuple<int, int>> matchTwoSided(std::vector<Keypoint> &keypoints1, std::vector<Keypoint> &keypoints2, float threshhold = 0.5, similarityFunction similarityFunction = cosineSimilarity);
 
     // vl hungarian method
 
