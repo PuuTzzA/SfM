@@ -10,6 +10,7 @@ add_executable(SfM
     submodules/detect/detectOpenCv.cpp
     submodules/io/file.cpp
     submodules/io/blender.cpp
+    submodules/match/match.cpp
     submodules/solve/bundleAdjustment.cpp
     submodules/solve/eightPoint.cpp
     submodules/solve/RANSAC.cpp

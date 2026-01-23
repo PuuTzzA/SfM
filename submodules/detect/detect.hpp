@@ -20,9 +20,11 @@ namespace SfM::detect
      */
     void SIFT(const Image<uchar> &image);
 
+    // vl SURF?
+
     void harrisCornerDetectionOpenCv(cv::Mat &image);
 
     std::vector<Vec2> harrisCornerDetectionSubPixelOpenCv(cv::Mat &image);
 
-    void siftCv(cv::Mat &image);
+    std::vector<Keypoint> SIFTOpenCv(cv::Mat &image);
 } // Namespace SfM::detect

@@ -14,6 +14,17 @@
 
 int main()
 {
+    std::string firstPath = "../../Data/Suzanne/animation/test_0001.png";
+    auto frame1 = cv::imread(firstPath);
+
+    std::string secondPath = "../../Data/Suzanne/animation/test_0002.png";
+    auto frame2 = cv::imread(secondPath);
+
+    SfM::detect::SIFTOpenCv(frame1);
+    SfM::detect::SIFTOpenCv(frame2);
+
+    return 0;
+
     // std::string path = "../../Data/real_image.jpg";
     std::string path = "../../Data/calibration.jpg";
 

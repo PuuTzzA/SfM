@@ -16,7 +16,7 @@ namespace SfM::solve
      */
     SfMResult eightPointAlgorithm(std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const Mat4 startTransform = Mat4::Identity());
 
-    /**
+    /* /**
      * REMOVED, because I din't want to maintain two separate Instances of the same logic
      * @brief Solves for the camera extrinsics and 3d positions of the keypoints with the 8 point algorithm.
      *
@@ -27,7 +27,7 @@ namespace SfM::solve
      *
      * @return Camera extrinsics and 3d locations of the 3d points
      */
-    // SfMResult eightPointAlgorithm(std::vector<Track> &tracks, const Mat3 K, const int numFrames, const Mat4 startTransform = Mat4::Identity());
+    // SfMResult eightPointAlgorithm(std::vector<Track> &tracks, const Mat3 K, const int numFrames, const Mat4 startTransform = Mat4::Identity()); */
 
     /**
      * @brief Solves for the camera extrinsics and 3d positions of the keypoints using non-linear optimization (bundle adjustment).
@@ -119,7 +119,7 @@ namespace SfM::solve
         Mat3 m_K_inv = Mat3::Identity();
         std::vector<Frame> m_frames;
         std::vector<Mat4> m_extrinsics;
-        std::vector<Vec3> m_points3d;
+        std::vector<Vec3> m_points3d; // Stores the 3d approximation in a vector with the approximation of a point with trackId i being on position i
         bool m_useRANSAC = false;
         RANSAC_OPTIONS m_RANSAC_options = {};
 

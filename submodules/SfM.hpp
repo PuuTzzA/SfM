@@ -40,7 +40,7 @@ namespace SfM
         /**
          * @brief Use this if you have multiple channels per pixel, e.g. rgb
          */
-        Image(int w, int h, int dim): width{w}, height{h}
+        Image(int w, int h, int dim) : width{w}, height{h}
         {
             data = new T[w * h * dim];
         }
@@ -84,13 +84,42 @@ namespace SfM
         Image(const Image &) = delete;
         Image &operator=(const Image &) = delete;
 
-        T *data; // Use T* instead of std::vector<T> because I want to malloc without initializing the data which that takes a long time 
+        T *data; // Use T* instead of std::vector<T> because I want to malloc without initializing the data which that takes a long time
         int width;
         int height;
     };
 
     /**
+     * @brief A keypoint represents a point feature found by a keypoint detector such as SIFT, SURF, ...
+     * @param descriptor Feature descriptor (For SIFT descriptor.size() = 128)
+     * @param point Sub-pixel coordinates of the feature
+     * @param size Feature diameter, meaningful neighborhood (For SIFT: zoom-level where the feature was found)
+     * @param angle Feature orientation [rad]
+     * @param response Keypoint detector response of the feature, strength of the feature
+     * @param octave Pyramid octave in which the keypoint has been detected
+     * @param trackId Unique Id per Track
+     */
+    struct Keypoint
+    {
+        enum Status
+        {
+            UNINITIALIZED = -1,
+        };
+
+        std::vector<REAL> descriptor;
+        Vec2 point;
+        REAL size;
+        REAL angle;
+        REAL response;
+        int octave;
+        int trackId = UNINITIALIZED;
+    };
+
+    /**
      * @brief An observation represents one 2D measurement
+     * @param point 2D measurement of the point in pixel coordinates
+     * @param trackId Unique Id per Track
+     * @param indexInLastFrame Matching Observation in the previous Frame
      */
     struct Observation
     {
@@ -100,19 +129,60 @@ namespace SfM
             NOT_FOUND = -2
         };
 
-        Vec2 point;                           // 2D measurement of the point in pixel coordinates
-        int trackId;                          // Unique Id per Frame
-        int indexInLastFrame = UNINITIALIZED; // Matching Observation in the previous Frame
+        Vec2 point;
+        int trackId;
+        int indexInLastFrame = UNINITIALIZED;
+    };
+
+    /**
+     * @brief An approximation represents one 3d point (over multiple frames)
+     * @param point 3d approximation of the point
+     * @param trackId Unique Id per track
+     */
+    struct Approximation
+    {
+        Vec3 point;
+        int trackId;
     };
 
     /**
      * @brief A frame from the camera with an unique id and a bunch of observations. For the "horizontal" approach, one frame one data object
+     * @param observation Vector of Observations
+     * @param kexpoints Vector of Keypoints (the observations are just the points from these keypoints)
+     * @param frameId Unique Id per Frame
      */
     struct Frame
     {
-        std::vector<Observation> observations; // Vector of Observations
-        int frameId;                           // Unique Id per Frame
+        std::vector<Observation> observations;
+        std::vector<Keypoint> keypoints;
+        int frameId;
     };
+
+    /**
+     * @brief Represents the result of the eight point algorithm
+     * @param pose 4x4 view Matrix of camera 2
+     * @param points Vector of reconstructed points
+     */
+    struct EightPointResult
+    {
+        Mat4 pose;
+        std::vector<Vec3> points;
+    };
+
+    /**
+     * @brief Final recostructed scene with camera extrinsics and reconstructed 3d points
+     * @param extrinsics Vector of camera extrinsics
+     * @param points Vector of reconstructed points (Point with trackId i is stored in points[i])
+     */
+    struct SfMResult
+    {
+        std::vector<Mat4> extrinsics;
+        std::vector<Vec3> points;
+    };
+
+    // ------------------------------------------------------------------------------------------------------------
+    // Not used from here -----------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------------------------
 
     /**
      * @brief An observation represents one 2D measurement
@@ -121,15 +191,6 @@ namespace SfM
     {
         int frameId; // Frame id
         Vec2 point;  // 2D measurement in that frame
-    };
-
-    /**
-     * @brief An approximation represents one 3d point (over multiple frames)
-     */
-    struct Approximation
-    {
-        int trackId; // Track id
-        Vec3 point;  // 3d approximation of that point
     };
 
     /**
@@ -149,20 +210,5 @@ namespace SfM
         int id;                                      // stable identity
         int lastIndex;                               // helper variable to find matches faster
         std::vector<SimpleObservation> observations; // sorted by frame Id
-    };
-
-    /**
-     * @brief Final recostructed scene with camera extrinsics and reconstructed 3d points
-     */
-    struct SfMResult
-    {
-        std::vector<Mat4> extrinsics; // Camera extrinsics
-        std::vector<Vec3> points;     // Reconstructed 3D points
-    };
-
-    struct EightPointResult
-    {
-        Mat4 pose;                // Pose of camera 2
-        std::vector<Vec3> points; // Reconstructed 3d points
     };
 } // Namespace SfM
