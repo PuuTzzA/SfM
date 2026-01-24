@@ -28,6 +28,50 @@ namespace SfM::util
     Mat4 calculateTransformationMatrixRad(REAL rotX, REAL rotY, REAL rotZ, Vec3 translation);
 
     /**
+     * @brief Converts a struct Image to a cv::Mat.
+     * @param image Input image
+     * @return cv::Mat of the image (rgb if T == ucar, monochrome if T == REAL)
+     */
+    template <typename T>
+    cv::Mat imageToCvMat(const Image<T> &image);
+
+    /**
+     * @brief Draws points on an image using UV coordinates and saves the result.
+     *
+     * @param image Input image
+     * @param outputImagePath Path to the output image.
+     * @param uvPoints Vector of points in pixel coordinates.
+     * @param drawCircles If true, points are drawn as circles; otherwise as squares.
+     * @param markerSize Radius/half-size of the point markers in pixels.
+     * @param color Color of the drawn markers.
+     * @return True if the image was successfully saved, false on failure.
+     */
+    bool drawPointsOnImage(const cv::Mat &image,
+                           const std::string &outputImagePath,
+                           const std::vector<Vec2> &uvPoints,
+                           bool drawCircles = true,
+                           int markerSize = 5,
+                           cv::Scalar color = cv::Scalar(0, 0, 255));
+
+    /**
+     * @brief Visualizes tracked points over a range of frames.
+     *
+     * @param images Vector of input images.
+     * @param tracks Vector of tracked points. Points in pixel coordinates.
+     * @param startFrame use frames from startFrame ...
+     * @param endFrame ... to endFrame
+     * @param outputPath Path to output image.
+     * @param markerSize Size of the markers.
+     * @return True if the image was successfully saved, false on failure.
+     */
+    void drawCollageWithTracks(const std::vector<cv::Mat> &images,
+                               const std::vector<std::vector<Vec2>> &tracks,
+                               int startFrame,
+                               int endFrame,
+                               const std::string &outputPath,
+                               int markerSize = 5);
+
+    /**
      * @brief Calculates the homeogeneous transformation matrix Rot_x @ Rot_y @ Rot_z + translation
      *
      * @param rotX Rotation around the x-axis in radians

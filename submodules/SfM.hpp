@@ -120,6 +120,7 @@ namespace SfM
      * @param point 2D measurement of the point in pixel coordinates
      * @param trackId Unique Id per Track
      * @param indexInLastFrame Matching Observation in the previous Frame
+     * @param inlier Bool is false if RANSAC marks this point as an outlier
      */
     struct Observation
     {
@@ -132,6 +133,7 @@ namespace SfM
         Vec2 point;
         int trackId;
         int indexInLastFrame = UNINITIALIZED;
+        bool inlier = true;
     };
 
     /**

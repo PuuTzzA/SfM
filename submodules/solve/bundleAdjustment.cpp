@@ -2,10 +2,6 @@
 #include "../util/util.hpp"
 #include <Eigen/SVD>
 #include <iostream>
-#include <ceres/ceres.h>
-#include <ceres/rotation.h>
-#include <ceres/loss_function.h>
-#include <thread>
 #include <algorithm>
 
 namespace SfM::solve
@@ -70,7 +66,7 @@ namespace SfM::solve
         extrinsics[2] = aa_vec[2];
     }
 
-    SfMResult bundleAdjustment(const std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const SfMResult *initialGuess, const Mat4 startTransform)
+    SfMResult bundleAdjustment(const std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const BUNDLE_ADJUSTMENT_OPTIONS &options, const SfMResult *initialGuess, const Mat4 startTransform)
     {
         std::vector<Vec3> points3d;
         std::vector<REAL> extrinsics(frames.size() * 6); // 3 * angle-axis, 3 * translation
@@ -87,7 +83,14 @@ namespace SfM::solve
         points3d.resize(numTotTracks);
         for (int i = 0; i < numTotTracks; i++)
         {
-            points3d[i] = initialGuess ? initialGuess->points[i] : Vec3(0, 0, 10);
+            if (initialGuess)
+            {
+                points3d[i] = initialGuess->points[i] != Vec3::Zero() ? initialGuess->points[i] : Vec3(0, 0, 10);
+            }
+            else
+            {
+                points3d[i] = Vec3(0, 0, 10);
+            }
         }
 
         for (int i = 0; i < frames.size(); i++)
@@ -120,6 +123,10 @@ namespace SfM::solve
 
             for (const auto &point : frames[i].observations)
             {
+                if (!point.inlier)
+                {
+                    continue;
+                }
                 REAL *pointPtr = points3d[point.trackId].data();
                 ceres::CostFunction *costFunction = BundleAdjustmentConstraint::create(K, point.point, 1.0);
                 // problem.AddResidualBlock(costFunction, new ceres::TukeyLoss(1.0), extrinsicPtr, pointPtr); // http://ceres-solver.org/nnls_modeling.html#instances
@@ -134,19 +141,14 @@ namespace SfM::solve
         problem.SetParameterBlockConstant(first_cam);
 
         // Solve Problem
-        ceres::Solver::Options options;
-        options.linear_solver_type = ceres::DENSE_SCHUR;                 // (DENSE_SCHUR and SPARSE_SCHUR best for BA) http://ceres-solver.org/nnls_solving.html#linear-solvers
-        options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT; // LEVENBERG_MARQUARDT (better?) is the default, other is DOGLEG
-        options.max_num_consecutive_invalid_steps = 10;
-        options.max_num_iterations = 256;
-        options.num_threads = std::thread::hardware_concurrency();
-        options.minimizer_progress_to_stdout = true;
-
         ceres::Solver::Summary summary;
-        ceres::Solve(options, &problem, &summary);
+        ceres::Solve(options.ceresOptions, &problem, &summary);
 
-        std::cout << "Running Bundle Adjustment on " << std::thread::hardware_concurrency() << " threads." << std::endl;
-        std::cout << summary.FullReport() << "\n";
+        if (options.printSummary)
+        {
+            std::cout << "BUNDLE ADJUSTMENT: Running Bundle Adjustment on " << std::thread::hardware_concurrency() << " threads." << std::endl;
+            std::cout << summary.FullReport() << "\n";
+        }
 
         // Extract Results
         SfMResult result;

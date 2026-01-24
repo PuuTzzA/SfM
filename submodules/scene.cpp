@@ -23,7 +23,7 @@ namespace SfM
 
     void Scene::setMatchingOptions(match::MATCHING_OPTIONS matchingOptions)
     {
-        m_sceneOptions.MATCHING_OPTIONS = matchingOptions;
+        m_sceneOptions.matchingOptions = matchingOptions;
     }
 
     void Scene::setUseRANSAC(bool useRANSAC)
@@ -31,9 +31,9 @@ namespace SfM
         m_sceneOptions.useRANSAC = useRANSAC;
     };
 
-    void Scene::setRANSACOptions(solve::RANSAC_OPTIONS RANSAC_options)
+    void Scene::setRANSACOptions(solve::RANSAC_OPTIONS ransacOptions)
     {
-        m_sceneOptions.RANSAC_OPTIONS = RANSAC_options;
+        m_sceneOptions.ransacOptions = ransacOptions;
     };
 
     void Scene::pushBackImageWithKeypoints(cv::Mat &&image, std::vector<Keypoint> &&keypoints)
@@ -47,7 +47,7 @@ namespace SfM
             return;
         }
 
-        auto matches = match::match(m_keypoints[lastIndex - 1], m_keypoints[lastIndex], m_sceneOptions.MATCHING_OPTIONS);
+        auto matches = match::match(m_keypoints[lastIndex - 1], m_keypoints[lastIndex], m_sceneOptions.matchingOptions);
 
         if (m_sceneOptions.verbose)
         {
@@ -66,10 +66,14 @@ namespace SfM
 
         Frame &frameA = m_frames[lastIndex - 1];
         Frame &frameB = m_frames[lastIndex];
-        for (auto [idxA, idxB] : matches)
+
+        std::vector<std::vector<Vec2>> tracks;
+        for (const auto &[idxA, idxB] : matches)
         {
             Keypoint &kpA = m_keypoints[lastIndex - 1][idxA];
             Keypoint &kpB = m_keypoints[lastIndex][idxB];
+
+            tracks.push_back({kpA.point, kpB.point});
 
             if (kpA.trackId == Keypoint::UNINITIALIZED) // new Track
             {
@@ -83,11 +87,12 @@ namespace SfM
             }
             else // existing Track. Add information to kbB
             {
-                kpB.trackId = m_currentNumTracks;
-                frameB.observations.push_back({.point = kpB.point, .trackId = m_currentNumTracks});
-                m_currentNumTracks++;
+                kpB.trackId = kpA.trackId;
+                frameB.observations.push_back({.point = kpB.point, .trackId = kpA.trackId});
             }
         };
+
+        util::drawCollageWithTracks({m_images[lastIndex - 1], m_images[lastIndex]}, tracks, 0, 2, "../../Data/found_tracks_" + std::to_string(lastIndex) + ".png");
 
         if (lastIndex == 1) // For the first two frames the observations are already in order
         {
@@ -99,7 +104,29 @@ namespace SfM
                       { return a.trackId < b.trackId; });
         }
 
-        solveForLastAddedFrame();
+        if (m_sceneOptions.useEightPoint)
+        {
+            solveForLastAddedFrame();
+        }
+    }
+
+    void Scene::optimizeExtrinsicsAnd3dPoints()
+    {
+        SfMResult optimized;
+        if (m_sceneOptions.useEightPoint)
+        {
+            const SfMResult initial{
+                .extrinsics = std::move(m_extrinsics),
+                .points = std::move(m_points3d),
+            };
+            optimized = solve::bundleAdjustment(m_frames, m_K, m_currentNumTracks, m_sceneOptions.bundleAdjustmentOptions, &initial, Mat4::Identity());
+        }
+        else
+        {
+            optimized = solve::bundleAdjustment(m_frames, m_K, m_currentNumTracks, m_sceneOptions.bundleAdjustmentOptions, nullptr, m_accumulatedPose);
+        }
+        m_extrinsics = std::move(optimized.extrinsics);
+        m_points3d = std::move(optimized.points);
     }
 
     void Scene::initializeEgithPointVariables()
@@ -133,11 +160,13 @@ namespace SfM
         m_shared23points3.clear();
         m_trackIndices23.clear();
 
+        std::vector<int> indicesOfNewerObservations; // used to find the observations in frame.observations to set the inlier flag to 0
+
         int j = 0; // dont reset j every iteration because the observations are sorted by trackId
-        for (auto &observation : m_frames[n].observations)
+        // for (auto &observation : m_frames[n].observations)
+        for (int i = 0, max = m_frames[n].observations.size(); i < max; i++)
         {
-            Vec2 o1;
-            Vec2 o2;
+            Observation &observation = m_frames[n].observations[i];
 
             // Find the matching observation in the prevous frame
             if (observation.indexInLastFrame == Observation::UNINITIALIZED)
@@ -163,11 +192,18 @@ namespace SfM
                 continue;
             }
 
-            o1 = m_frames[n - 1].observations[observation.indexInLastFrame].point;
-            o2 = observation.point;
+            if (!m_frames[n - 1].observations[observation.indexInLastFrame].inlier)
+            {
+                continue;
+            }
+
+            Vec2 o1 = m_frames[n - 1].observations[observation.indexInLastFrame].point;
+            Vec2 o2 = observation.point;
             m_shared23points2.push_back(normalizePoints(o1));
             m_shared23points3.push_back(normalizePoints(o2));
             m_trackIndices23.push_back(observation.trackId);
+
+            indicesOfNewerObservations.push_back(i);
         }
 
         // Calculate new pose and points
@@ -177,7 +213,7 @@ namespace SfM
         }
         else
         {
-            auto inliers = solve::RANSAC(m_shared23points2, m_shared23points3, m_K, m_sceneOptions.RANSAC_OPTIONS);
+            auto inliers = solve::RANSAC(m_shared23points2, m_shared23points3, m_K, m_sceneOptions.ransacOptions);
 
             if (inliers.size() >= 8)
             {
@@ -185,11 +221,20 @@ namespace SfM
                 std::vector<Vec2> inliers2;
                 std::vector<int> inliersTrackIndeces;
 
+                std::vector<Observation> &newObs = m_frames[n].observations;
+                std::vector<bool> inlierMask(newObs.size(), false);
+
                 for (const auto &i : inliers)
                 {
+                    inlierMask[i] = true;
                     inliers1.push_back(m_shared23points2[i]);
                     inliers2.push_back(m_shared23points3[i]);
                     inliersTrackIndeces.push_back(m_trackIndices23[i]);
+                }
+
+                for (int i = 0, max = newObs.size(); i < max; i++)
+                {
+                    newObs[i].inlier = inlierMask[i];
                 }
 
                 m_frame23 = solve::eightPointAlgorithm(inliers1, inliers2);
@@ -285,12 +330,12 @@ namespace SfM
         solveForLastAddedFrame();
     }
 
-    std::vector<Mat4> Scene::getExtrinsics()
+    std::vector<Mat4> &Scene::getExtrinsics()
     {
         return m_extrinsics;
     };
 
-    std::vector<Vec3> Scene::get3dPoints()
+    std::vector<Vec3> &Scene::get3dPoints()
     {
         return m_points3d;
     };

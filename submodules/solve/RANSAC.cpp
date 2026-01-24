@@ -30,6 +30,12 @@ namespace SfM::solve
 
     std::vector<int> RANSAC(const std::vector<Vec2> &x, const std::vector<Vec2> &y, const Mat3 &K, const RANSAC_OPTIONS &options)
     {
+        if (x.size() != y.size() || x.size() < options.minN)
+        {
+            std::cerr << "RANSAC: x and y have to have the same size >= options.minN. x.size() was " << x.size() << std::endl;
+            return {};
+        }
+
         auto limit = std::chrono::milliseconds(options.maxTimeMs);
         auto start = std::chrono::steady_clock::now();
 

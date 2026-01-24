@@ -1,4 +1,6 @@
 #include <iostream>
+#include "submodules/SfM.hpp"
+#include "submodules/scene.hpp"
 #include "submodules/calibrate/calibrate.hpp"
 #include "submodules/detect/detect.hpp"
 #include "submodules/io/file.hpp"
@@ -15,14 +17,70 @@
 
 int main()
 {
-    std::string firstPath = "../../Data/Suzanne/animation/test_0001.png";
-    auto frame1 = cv::imread(firstPath);
+    SfM::REAL width_px = 1920.;
+    SfM::REAL height_px = 1080.;
+    SfM::REAL f_mm = 50.;
+    SfM::REAL sensor_mm = 36.f;
 
-    std::string secondPath = "../../Data/Suzanne/animation/test_0002.png";
-    auto frame2 = cv::imread(secondPath);
+    SfM::REAL fx = f_mm * width_px / sensor_mm; // focal length in pixel
+    SfM::REAL fy = fx;
+    SfM::REAL cx = width_px / 2.0f;  // 960
+    SfM::REAL cy = height_px / 2.0f; // 540
 
-    SfM::detect::SIFTOpenCv(frame1);
-    SfM::detect::SIFTOpenCv(frame2);
+    SfM::Mat3 K;
+    K << fx, 0, cx,
+        0, fy, cy,
+        0, 0, 1;
+
+    SfM::Mat4 startTransform = SfM::util::cvCameraToBlender(SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)));
+    // SfM::Mat4 startTransform = SfM::Mat4::Identity();
+
+    SfM::match::MATCHING_OPTIONS matchingOptions{
+        .threshold = 0.92,
+    };
+    SfM::solve::RANSAC_OPTIONS ransacOptions{
+        .maxIter = 1024,
+        .maxTimeMs = 20000,
+        .maxSquaredError = 10,
+    };
+    SfM::solve::BUNDLE_ADJUSTMENT_OPTIONS baOptions{
+        .ceresOptions = {
+            .trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT, // LEVENBERG_MARQUARDT (better?) is the default, other is DOGLEG
+            .max_num_iterations = 512,
+            .max_solver_time_in_seconds = 100,
+            .num_threads = static_cast<int>(std::thread::hardware_concurrency()),
+            .max_num_consecutive_invalid_steps = 10,
+            .linear_solver_type = ceres::DENSE_SCHUR, // (DENSE_SCHUR and SPARSE_SCHUR best for BA) http://ceres-solver.org/nnls_solving.html#linear-solvers
+            .minimizer_progress_to_stdout = true,
+        },
+        .printSummary = true,
+    };
+    SfM::SCENE_OPTIONS sceneOptions{
+        .matchingOptions = matchingOptions,
+        .ransacOptions = ransacOptions,
+        .bundleAdjustmentOptions = baOptions,
+        .useEightPoint = false,
+        .useRANSAC = true,
+    };
+
+    SfM::Scene scene(K, startTransform, sceneOptions);
+
+    auto images = SfM::io::loadImages("../../Data/TestScene/animation1/");
+    // std::vector<cv::Mat> images;
+
+    std::cout << "loaded " << images.size() << " images." << std::endl;
+    for (int i = 0; i < images.size(); i++)
+    {
+        auto keypoints = SfM::detect::SIFTOpenCv(images[i]);
+        std::cout << "Detected: " << keypoints.size() << " keypoints." << std::endl;
+        auto img = cv::imread("../../Data/siftImg_" + std::to_string(i) + ".png");
+
+        scene.pushBackImageWithKeypoints(std::move(img), std::move(keypoints));
+    }
+
+    scene.optimizeExtrinsicsAnd3dPoints();
+
+    SfM::io::exportTracksForBlender(scene.getExtrinsics(), scene.get3dPoints(), "../../Data/test_whole_pipeline.txt");
 
     return 0;
     /*  // Testing
@@ -53,7 +111,7 @@ int main()
 
     blurred = SfM::util::mulScalar(blurred, static_cast<float>(255));
 
-    auto cv = SfM::io::imageToCvMat(blurred);
+    auto cv = SfM::util::imageToCvMat(blurred);
     cv::imwrite("../../Data/______blurred.png", cv);
 
     return 0;

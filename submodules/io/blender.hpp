@@ -12,7 +12,8 @@ namespace SfM::io
      * 
      * @param cameraExtrinsics Vector of cameraExtrinsics
      * @param points Vector of 3d points
-     * @param path String to output path
+     * @param path Output path
+     * @param pathToImages Path to dir with images used (to set as camera background image)
      */
-    void exportTracksForBlender(std::vector<Mat4> &cameraExtrinsics, std::vector<Vec3> &points, std::string path);
+    void exportTracksForBlender(std::vector<Mat4> &cameraExtrinsics, std::vector<Vec3> &points, std::string path, std::string pathToImages = "");
 } // Namespace SfM::io

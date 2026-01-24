@@ -3,7 +3,7 @@
 
 namespace SfM::io
 {
-    void exportTracksForBlender(std::vector<Mat4> &cameraExtrinsics, std::vector<Vec3> &points, std::string path)
+    void exportTracksForBlender(std::vector<Mat4> &cameraExtrinsics, std::vector<Vec3> &points, std::string path, std::string pathToImages)
     {
         std::ofstream out(path, std::ios::trunc); // trunc ensures overwrite
         if (!out.is_open())
