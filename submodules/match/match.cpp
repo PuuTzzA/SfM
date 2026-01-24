@@ -6,7 +6,22 @@
 
 namespace SfM::match
 {
-    std::vector<std::tuple<int, int>> matchTwoSided(std::vector<Keypoint> &keypoints1, std::vector<Keypoint> &keypoints2, float threshhold, similarityFunction similarityFunction)
+    std::vector<std::tuple<int, int>> match(const std::vector<Keypoint> &keypoints1, const std::vector<Keypoint> &keypoints2, const MATCHING_OPTIONS &options)
+    {
+        std::vector<std::tuple<int, int>> result;
+        switch (options.algorithm)
+        {
+        case matchingAlgorithm::TWO_SIDED_MATHICHNG:
+            result = matchTwoSided(keypoints1, keypoints2, options.threshold, options.similarityMetric);
+            break;
+        default:
+            throw std::invalid_argument("Match: Unknown matching algorithm. Was " + options.algorithm);
+        }
+
+        return result;
+    };
+
+    std::vector<std::tuple<int, int>> matchTwoSided(const std::vector<Keypoint> &keypoints1, const std::vector<Keypoint> &keypoints2, float threshhold, similarityFunction similarityFunction)
     {
         int lenA = keypoints1.size();
         int lenB = keypoints2.size();

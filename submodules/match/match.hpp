@@ -5,14 +5,12 @@
 
 namespace SfM::match
 {
-    /**
-     * @brief Creates a new frame from a list of Keypoints
-     * @param keypoints Vector of Keypoints
-     * @return A newly initialized frame
-     */
-    Frame createFirstFrameFromKeypoints(std::vector<Keypoint> &keypoints);
-
     using similarityFunction = std::function<float(const std::vector<float> &, const std::vector<float> &)>;
+
+    enum matchingAlgorithm
+    {
+        TWO_SIDED_MATHICHNG,
+    };
 
     /**
      * @brief Computes the dot product of two vectors
@@ -48,15 +46,37 @@ namespace SfM::match
     }
 
     /**
+     * @brief Options for the matching step.
+     * @param algorithm Matching algorithm used (default = two sided matching)
+     * @param similarityMetric Function to calculate the similarity between two descriptiors (default = cosine similarity)
+     * @param threshold Minimal threshold to count a match
+     */
+    struct MATCHING_OPTIONS
+    {
+        matchingAlgorithm algorithm = matchingAlgorithm::TWO_SIDED_MATHICHNG;
+        similarityFunction similarityMetric = cosineSimilarity;
+        float threshold = 0.5f;
+    };
+
+    /**
+     * @brief Finds matching keypoints between two frames
+     * @param keypoints1 Vector of keypoints to match
+     * @param keypoints2 Vector of keypoints to match
+     * @param options Options that control e.g. the matching algorithm or the similarity metric
+     * @return Vector of matches (<int, int> = index in first, index in second)
+     */
+    std::vector<std::tuple<int, int>> match(const std::vector<Keypoint> &keypoints1, const std::vector<Keypoint> &keypoints2, const MATCHING_OPTIONS &options);
+
+    /**
      * @brief Finds matching keypoints between frames
      * The matching is performed on a two-sided
      * @param keypoints1 Vector of keypoints to match
      * @param keypoints2 Vector of keypoints to match
-     * @param threshhold Min similarity score 
+     * @param threshold Min similarity score
      * @param similarityFunction Function that computes a similarity measure between two vectors (default cosine similarity)
      * @return Vector of matches (<int, int> = index in first, index in second)
      */
-    std::vector<std::tuple<int, int>> matchTwoSided(std::vector<Keypoint> &keypoints1, std::vector<Keypoint> &keypoints2, float threshhold = 0.5, similarityFunction similarityFunction = cosineSimilarity);
+    std::vector<std::tuple<int, int>> matchTwoSided(const std::vector<Keypoint> &keypoints1, const std::vector<Keypoint> &keypoints2, float threshold = 0.5, similarityFunction similarityFunction = cosineSimilarity);
 
     // vl hungarian method
 

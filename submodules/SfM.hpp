@@ -147,7 +147,7 @@ namespace SfM
 
     /**
      * @brief A frame from the camera with an unique id and a bunch of observations. For the "horizontal" approach, one frame one data object
-     * @param observation Vector of Observations
+     * @param observation Vector of Observations (Sorted by trackId)
      * @param frameId Unique Id per Frame
      */
     struct Frame

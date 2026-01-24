@@ -55,6 +55,22 @@ namespace SfM::solve
                                                    const std::vector<Vec2> &allPoints1, const std::vector<Vec2> &allPoints2);
 
     /**
+     * @brief Calculates the reprojection error of a 3d point given the NORMALIZED observation, viewMatrix and the intrinsics
+     * @return Squared distance
+     */
+    inline REAL reprojectionError(const Mat3 &K, const Vec2 observation, const Vec3 point3d, const Mat4 &viewMatrix)
+    {
+        Vec3 p = K * (viewMatrix * point3d.homogeneous()).head<3>();
+        p[0] /= p[2];
+        p[1] /= p[2];
+        Vec3 obs(observation[0], observation[1], 1.);
+        obs = K * obs; // multiply by K because the observations are normalized, don't divie by z, bc z == 1.
+        REAL dx = p[0] - obs[0];
+        REAL dy = p[1] - obs[1];
+        return dx * dx + dy * dy;
+    }
+
+    /**
      * @brief Options for random sample consensus to find in- and outliers
      *
      * @param minN Minimum number of data points to estimate parameters
@@ -70,13 +86,18 @@ namespace SfM::solve
         using fittingFunction = std::function<EightPointResult(const std::vector<Vec2> &, const std::vector<Vec2> &, const std::vector<Vec2> &, const std::vector<Vec2> &)>; // calcPoints1, calcPoints2, allPoints1, allPoints2
         using lossFunction = std::function<REAL(const Mat3 &, const Vec2, const Vec2, const Vec3, const Mat4 &)>;                                                            // Intrinsics, Observation1, Observation2, 3dPoint, View Matrix
 
-        int minN;
-        int maxIter;
-        int maxTimeMs;
-        REAL maxSquaredError;
+        int minN = 8;
+        int maxIter = 512;
+        int maxTimeMs = 1000;
+        REAL maxSquaredError = 10;
         REAL successProb = static_cast<REAL>(0.99);
-        fittingFunction model;
-        lossFunction loss;
+        fittingFunction model = eightPointAlgorithmFromSubset;
+        lossFunction loss = [](const Mat3 &K, const Vec2 obs1, const Vec2 obs2, const Vec3 point3d, const Mat4 &viewMat)
+        {
+            REAL loss1 = reprojectionError(K, obs1, point3d, Mat4::Identity()); // is always ~0 since points are created with obs1 * lamba
+            REAL loss2 = reprojectionError(K, obs2, point3d, viewMat);
+            return std::max(loss1, loss2);
+        };
     };
 
     /**
@@ -90,22 +111,6 @@ namespace SfM::solve
      * @return Vector of inliers
      */
     std::vector<int> RANSAC(const std::vector<Vec2> &x, const std::vector<Vec2> &y, const Mat3 &K, const RANSAC_OPTIONS &options);
-
-    /**
-     * @brief Calculates the reprojection error of a 3d point given the NORMALIZED observation, viewMatrix and the intrinsics
-     * @return Squared distance
-     */
-    inline REAL reprojectionError(const Mat3 &K, const Vec2 observation, const Vec3 point3d, const Mat4 &viewMatrix)
-    {
-        Vec3 p = K * (viewMatrix * point3d.homogeneous()).head<3>();
-        p[0] /= p[2];
-        p[1] /= p[2];
-        Vec3 obs(observation[0], observation[1], 1.);
-        obs = K * obs; // multiply by K because the observations are normalized, don't divie by z, bc z == 1.
-        REAL dx = p[0] - obs[0];
-        REAL dy = p[1] - obs[1];
-        return dx * dx + dy * dy;
-    }
 
     /**
      * @brief Computes the thing that gets minimized in the 8 point algorithm. Namely: x2^T * E * x1 = 0

@@ -39,11 +39,9 @@ namespace SfM::solve
             std::cerr << "frames has to be of size >= 2 to solve for camera motion!" << std::endl;
         }
 
-        scene.initializeFromFirstFrame(std::move(frames[0]), numTotTracks);
-
-        for (int i = 1; i < frames.size(); i++)
+        for (int i = 0; i < frames.size(); i++)
         {
-            scene.addFrame(std::move(frames[i]), numTotTracks);
+            scene.addFrameWithoutMatching(std::move(frames[i]), numTotTracks);
         }
 
         return {scene.getExtrinsics(), scene.get3dPoints()};
@@ -53,7 +51,7 @@ namespace SfM::solve
     {
         if (points1.size() < 8)
         {
-            throw std::invalid_argument("There have to be at least 8 pair-to-pair-correspondences (was: " + std::to_string(points1.size()) + ") to approximate a pose.");
+            throw std::invalid_argument("EightPointAlgorithm: There have to be at least 8 pair-to-pair-correspondences (was: " + std::to_string(points1.size()) + ") to approximate a pose.");
         }
 
         // row major indexing: matrix(row, column)
@@ -222,7 +220,7 @@ namespace SfM::solve
     {
         if (calcPoints1.size() < 8)
         {
-            throw std::invalid_argument("There have to be at least 8 pair-to-pair-correspondences (was: " + std::to_string(calcPoints1.size()) + ") to approximate a pose.");
+            throw std::invalid_argument("EightPointFromSubset: There have to be at least 8 pair-to-pair-correspondences (was: " + std::to_string(calcPoints1.size()) + ") to approximate a pose.");
         }
 
         // row major indexing: matrix(row, column)

@@ -3,11 +3,12 @@
 #include <Eigen/SVD>
 #include <iostream>
 #include <unordered_set>
+#include <algorithm>
 
 namespace SfM
 {
-    Scene::Scene(const Mat3 K, const Mat4 startTransform, bool useRANSAC, solve::RANSAC_OPTIONS RANSAC_options)
-        : m_K{K}, m_K_inv{K.inverse()}, m_accumulatedPose{startTransform}, m_useRANSAC{useRANSAC}, m_RANSAC_options{RANSAC_options} {};
+    Scene::Scene(const Mat3 K, const Mat4 startTransform, SCENE_OPTIONS sceneOptions)
+        : m_K{K}, m_K_inv{K.inverse()}, m_accumulatedPose{startTransform}, m_sceneOptions{sceneOptions} {};
 
     void Scene::setK(const Mat3 K)
     {
@@ -20,56 +21,106 @@ namespace SfM
         m_accumulatedPose = startTransform;
     };
 
+    void Scene::setMatchingOptions(match::MATCHING_OPTIONS matchingOptions)
+    {
+        m_sceneOptions.MATCHING_OPTIONS = matchingOptions;
+    }
+
     void Scene::setUseRANSAC(bool useRANSAC)
     {
-        m_useRANSAC = useRANSAC;
+        m_sceneOptions.useRANSAC = useRANSAC;
     };
 
     void Scene::setRANSACOptions(solve::RANSAC_OPTIONS RANSAC_options)
     {
-        m_RANSAC_options = RANSAC_options;
+        m_sceneOptions.RANSAC_OPTIONS = RANSAC_options;
     };
 
-    void Scene::initializeFromFirstFrame(Frame &&frame, const int numTotTracks)
+    void Scene::pushBackImageWithKeypoints(cv::Mat &&image, std::vector<Keypoint> &&keypoints)
     {
-        m_shared12points1.reserve(numTotTracks);
-        m_shared12points2.reserve(numTotTracks);
+        m_images.push_back(image);
+        m_keypoints.push_back(keypoints);
 
-        m_shared23points2.reserve(numTotTracks);
-        m_shared23points3.reserve(numTotTracks);
-
-        m_trackIndices12.reserve(numTotTracks);
-        m_trackIndices23.reserve(numTotTracks);
-
-        m_points3d.resize(numTotTracks, Vec3::Zero());
-        m_extrinsics.push_back(m_accumulatedPose);
-
-        m_frames.push_back(std::move(frame));
-    };
-
-    REAL getMedian(std::vector<REAL> &v)
-    {
-        size_t n = v.size();
-        if (n == 0)
-            return 1.0;
-        std::nth_element(v.begin(), v.begin() + n / 2, v.end());
-        return v[n / 2];
-    }
-
-    void Scene::addFrame(Frame &&frame, const int newNumTotTracks)
-    {
-        if (newNumTotTracks < m_points3d.size())
+        int lastIndex = m_keypoints.size() - 1;
+        if (lastIndex < 1) // can only match if there are at least two images
         {
-            std::cerr << "The number of 3d points should never decrease! was " << m_points3d.size() << ", got " << newNumTotTracks << std::endl;
             return;
         }
-        m_frames.push_back(std::move(frame));
-        if (m_frames.size() < 2)
+
+        auto matches = match::match(m_keypoints[lastIndex - 1], m_keypoints[lastIndex], m_sceneOptions.MATCHING_OPTIONS);
+
+        if (m_sceneOptions.verbose)
         {
-            std::cerr << "Scene::initializeFromFirstFrame must be called before calling Scene::addFrame!" << std::endl;
+            std::cout << "Scene::pushBackImageWithKeypoints: Matched: " << matches.size() << " keyframes between frame " << lastIndex - 1 << " and " << lastIndex << std::endl;
         }
 
-        m_points3d.resize(newNumTotTracks, Vec3::Zero());
+        if (lastIndex == 1) // Create new frame
+        {
+            m_frames.push_back({.frameId = 0});
+            m_frames.push_back({.frameId = 1});
+        }
+        else
+        {
+            m_frames.push_back({.frameId = lastIndex});
+        }
+
+        Frame &frameA = m_frames[lastIndex - 1];
+        Frame &frameB = m_frames[lastIndex];
+        for (auto [idxA, idxB] : matches)
+        {
+            Keypoint &kpA = m_keypoints[lastIndex - 1][idxA];
+            Keypoint &kpB = m_keypoints[lastIndex][idxB];
+
+            if (kpA.trackId == Keypoint::UNINITIALIZED) // new Track
+            {
+                kpA.trackId = m_currentNumTracks;
+                kpB.trackId = m_currentNumTracks;
+
+                frameA.observations.push_back({.point = kpA.point, .trackId = m_currentNumTracks});
+                frameB.observations.push_back({.point = kpB.point, .trackId = m_currentNumTracks});
+
+                m_currentNumTracks++;
+            }
+            else // existing Track. Add information to kbB
+            {
+                kpB.trackId = m_currentNumTracks;
+                frameB.observations.push_back({.point = kpB.point, .trackId = m_currentNumTracks});
+                m_currentNumTracks++;
+            }
+        };
+
+        if (lastIndex == 1) // For the first two frames the observations are already in order
+        {
+            initializeEgithPointVariables();
+        }
+        else
+        {
+            std::sort(frameB.observations.begin(), frameB.observations.end(), [](const Observation &a, const Observation &b)
+                      { return a.trackId < b.trackId; });
+        }
+
+        solveForLastAddedFrame();
+    }
+
+    void Scene::initializeEgithPointVariables()
+    {
+        m_points3d.resize(m_currentNumTracks, Vec3::Zero());
+        m_extrinsics.push_back(m_accumulatedPose);
+    }
+
+    void Scene::solveForLastAddedFrame()
+    {
+        if (m_currentNumTracks < m_points3d.size())
+        {
+            std::cerr << "Scene::solveForLastAddedFrame: The number of 3d points should never decrease! was " << m_points3d.size() << ", got " << m_currentNumTracks << std::endl;
+            return;
+        }
+        if (m_frames.size() < 2)
+        {
+            std::cerr << "Scene::solveForLastAddedFrame called but the number of frames was not >= 2, was: " << m_frames.size() << "!" << std::endl;
+        }
+
+        m_points3d.resize(m_currentNumTracks, Vec3::Zero());
         int n = m_frames.size() - 1;
 
         // Reset and move points
@@ -120,13 +171,13 @@ namespace SfM
         }
 
         // Calculate new pose and points
-        if (!m_useRANSAC)
+        if (!m_sceneOptions.useRANSAC)
         {
             m_frame23 = solve::eightPointAlgorithm(m_shared23points2, m_shared23points3);
         }
         else
         {
-            auto inliers = solve::RANSAC(m_shared23points2, m_shared23points3, m_K, m_RANSAC_options);
+            auto inliers = solve::RANSAC(m_shared23points2, m_shared23points3, m_K, m_sceneOptions.RANSAC_OPTIONS);
 
             if (inliers.size() >= 8)
             {
@@ -221,6 +272,19 @@ namespace SfM
         m_extrinsics.push_back(m_accumulatedPose *= viewMat.inverse());
     };
 
+    void Scene::addFrameWithoutMatching(Frame &&frame, const int newNumTotTracks)
+    {
+        m_currentNumTracks = newNumTotTracks;
+        m_frames.push_back(frame);
+
+        if (m_frames.size() == 1)
+        {
+            initializeEgithPointVariables();
+            return;
+        }
+        solveForLastAddedFrame();
+    }
+
     std::vector<Mat4> Scene::getExtrinsics()
     {
         return m_extrinsics;
@@ -230,6 +294,15 @@ namespace SfM
     {
         return m_points3d;
     };
+
+    REAL Scene::getMedian(std::vector<REAL> &v)
+    {
+        size_t n = v.size();
+        if (n == 0)
+            return 1.0;
+        std::nth_element(v.begin(), v.begin() + n / 2, v.end());
+        return v[n / 2];
+    }
 
     Vec2 Scene::normalizePoints(Vec2 pixel)
     {
