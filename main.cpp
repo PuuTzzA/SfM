@@ -65,7 +65,12 @@ int main()
 
     SfM::Scene scene(K, startTransform, sceneOptions);
 
-    auto images = SfM::io::loadImages("../../Data/TestScene/animation1/");
+    std::string pathToImages = "../../Data/TestScene/animation1/"; 
+
+    SfM::io::exportTracksForBlender(scene.getExtrinsics(), scene.get3dPoints(), "../../Data/test_abs_path.txt", "./TestScene/animation1");
+    return 0;
+
+    auto images = SfM::io::loadImages(pathToImages);
     // std::vector<cv::Mat> images;
 
     std::cout << "loaded " << images.size() << " images." << std::endl;

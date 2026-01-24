@@ -19,6 +19,13 @@ namespace SfM::io
         out << "# Number of camera frames and number of points \n";
         out << cameraExtrinsics.size() << " " << points.size() << "\n";
 
+        std::cout << "Moin inside" << std::endl;
+        if (!pathToImages.empty())
+        {
+            out << "\n# Path to images \n";
+            out << pathToImages << "\n";
+        }
+
         // 4. Write Camera Poses (converted to Blender space)
         out << "\n# Camera frames \n";
         for (const auto &pose : cameraExtrinsics)
