@@ -70,6 +70,7 @@ namespace SfM::solve
     {
         std::vector<Vec3> points3d;
         std::vector<REAL> extrinsics(frames.size() * 6); // 3 * angle-axis, 3 * translation
+        const Vec3 DEFAULT_POINT_POS = Vec3(0, 0, 10);
 
         if (initialGuess)
         {
@@ -85,11 +86,11 @@ namespace SfM::solve
         {
             if (initialGuess)
             {
-                points3d[i] = initialGuess->points[i] != Vec3::Zero() ? initialGuess->points[i] : Vec3(0, 0, 10);
+                points3d[i] = initialGuess->points[i] != Vec3::Zero() ? initialGuess->points[i] : DEFAULT_POINT_POS;
             }
             else
             {
-                points3d[i] = Vec3(0, 0, 10);
+                points3d[i] = DEFAULT_POINT_POS;
             }
         }
 
@@ -123,12 +124,12 @@ namespace SfM::solve
 
             for (const auto &point : frames[i].observations)
             {
-                if (!point.inlier)
+                if (!point->inlier)
                 {
                     continue;
                 }
-                REAL *pointPtr = points3d[point.trackId].data();
-                ceres::CostFunction *costFunction = BundleAdjustmentConstraint::create(K, point.point, 1.0);
+                REAL *pointPtr = points3d[point->trackId].data();
+                ceres::CostFunction *costFunction = BundleAdjustmentConstraint::create(K, point->point, 1.0);
                 // problem.AddResidualBlock(costFunction, new ceres::TukeyLoss(1.0), extrinsicPtr, pointPtr); // http://ceres-solver.org/nnls_modeling.html#instances
                 problem.AddResidualBlock(costFunction, new ceres::CauchyLoss(0.5), extrinsicPtr, pointPtr); // very good at outlier detection (but as the normal BA, kinda volatile to changes in the initialization)
                 // problem.AddResidualBlock(costFunction, nullptr, extrinsicPtr, pointPtr);
@@ -190,7 +191,12 @@ namespace SfM::solve
         result.points = std::move(points3d);
         for (auto &p : result.points)
         {
-            p = (startTransform * scale * p.homogeneous()).head<3>();
+            Vec3 pointInWorldSpace = (startTransform * scale * p.homogeneous()).head<3>();
+            if (p != DEFAULT_POINT_POS)
+            {
+                result.pointsFiltered.push_back(pointInWorldSpace);
+            }
+            p = pointInWorldSpace;
         }
 
         return result;

@@ -15,6 +15,7 @@ namespace SfM
      * @param useEightPoint Bool to turn of matching with the eight point algorihtm (and therefore also finding outliers with RANSAC)
      * @param useRANSAC Bool to turn off RANSAC
      * @param verbose Bool to turn off debug information
+     * @param maxTranslationPerFrame Maximal distance the camera can travel between frames
      */
     struct SCENE_OPTIONS
     {
@@ -24,6 +25,7 @@ namespace SfM
         bool useEightPoint = true;
         bool useRANSAC = true;
         bool verbose = true;
+        REAL maxTranslationPerFrame = 15;
     };
 
     /**
@@ -44,6 +46,10 @@ namespace SfM
         void setRANSACOptions(solve::RANSAC_OPTIONS ransacOptions);
         std::vector<Mat4> &getExtrinsics();
         std::vector<Vec3> &get3dPoints();
+        /**
+         * @brief Returns the approximated 3d points, without points that are only seen from one frame (i.e. that have been marked as outliers)
+         */
+        std::vector<Vec3> &get3dPointsFilterd();
 
         /**
          * @brief Add a new frame at the end of the scene.
@@ -86,10 +92,12 @@ namespace SfM
         std::vector<Frame> m_frames;
         std::vector<Mat4> m_extrinsics;
         std::vector<Vec3> m_points3d; // Stores the 3d approximation in a vector with the approximation of a point with trackId i being on position i
+        std::vector<Vec3> m_points3dFilterd;
         SCENE_OPTIONS m_sceneOptions = {};
 
         // Other helper member variables
         int m_currentNumTracks = 0;
+        std::vector<int> m_point3dCounts; // Stores how often a 3d point was triangulated
 
         // Values that are needed to match the old frame to the new one
         std::vector<Vec2> m_shared12points1;

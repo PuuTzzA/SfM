@@ -19,7 +19,7 @@ namespace SfM
 
     using Vec2I = Eigen::Matrix<int, 2, 1>;
 
-    constexpr REAL EPSILON = static_cast<REAL>(1e-7);
+    constexpr REAL EPSILON = static_cast<REAL>(1e-6);
 
     /**
      * @brief Wrapper for an image.
@@ -90,6 +90,29 @@ namespace SfM
     };
 
     /**
+     * @brief An observation represents one 2D measurement
+     * @param point 2D measurement of the point in pixel coordinates
+     * @param trackId Unique Id per Track
+     * @param indexInLastFrame Matching Observation in the previous Frame
+     * @param inlier Bool is false if RANSAC marks this point as an outlier
+     * @param wasOutlierBefore Helper bool to check if the obervation is really an outlier or just a new track 
+     */
+    struct Observation
+    {
+        enum Status
+        {
+            UNINITIALIZED = -1,
+            NOT_FOUND = -2
+        };
+
+        Vec2 point;
+        int trackId;
+        int indexInLastFrame = UNINITIALIZED;
+        bool inlier = true;
+        bool wasOutlierBefore = false;
+    };
+
+    /**
      * @brief A keypoint represents a point feature found by a keypoint detector such as SIFT, SURF, ...
      * @param descriptor Feature descriptor (For SIFT descriptor.size() = 128)
      * @param point Sub-pixel coordinates of the feature
@@ -98,6 +121,7 @@ namespace SfM
      * @param response Keypoint detector response of the feature, strength of the feature
      * @param octave Pyramid octave in which the keypoint has been detected
      * @param trackId Unique Id per Track
+     * @param observation Pointer to observation in Frames
      */
     struct Keypoint
     {
@@ -113,27 +137,7 @@ namespace SfM
         REAL response;
         int octave;
         int trackId = UNINITIALIZED;
-    };
-
-    /**
-     * @brief An observation represents one 2D measurement
-     * @param point 2D measurement of the point in pixel coordinates
-     * @param trackId Unique Id per Track
-     * @param indexInLastFrame Matching Observation in the previous Frame
-     * @param inlier Bool is false if RANSAC marks this point as an outlier
-     */
-    struct Observation
-    {
-        enum Status
-        {
-            UNINITIALIZED = -1,
-            NOT_FOUND = -2
-        };
-
-        Vec2 point;
-        int trackId;
-        int indexInLastFrame = UNINITIALIZED;
-        bool inlier = true;
+        Observation *observation = nullptr;
     };
 
     /**
@@ -154,7 +158,7 @@ namespace SfM
      */
     struct Frame
     {
-        std::vector<Observation> observations;
+        std::vector<std::unique_ptr<Observation>> observations;
         int frameId;
     };
 
@@ -173,11 +177,13 @@ namespace SfM
      * @brief Final recostructed scene with camera extrinsics and reconstructed 3d points
      * @param extrinsics Vector of camera extrinsics
      * @param points Vector of reconstructed points (Point with trackId i is stored in points[i])
+     * @param pointsFiltered Vector of reconstructed points without outlier points
      */
     struct SfMResult
     {
         std::vector<Mat4> extrinsics;
         std::vector<Vec3> points;
+        std::vector<Vec3> pointsFiltered;
     };
 
     // ------------------------------------------------------------------------------------------------------------

@@ -36,12 +36,13 @@ int main()
     // SfM::Mat4 startTransform = SfM::Mat4::Identity();
 
     SfM::match::MATCHING_OPTIONS matchingOptions{
-        .threshold = 0.92,
+        .threshold = 0.9,
     };
     SfM::solve::RANSAC_OPTIONS ransacOptions{
-        .maxIter = 1024,
+        .maxIter = 2048 * 4,
         .maxTimeMs = 20000,
-        .maxSquaredError = 10,
+        .maxSquaredError = 2,
+        .successProb = 0.999,
     };
     SfM::solve::BUNDLE_ADJUSTMENT_OPTIONS baOptions{
         .ceresOptions = {
@@ -50,7 +51,8 @@ int main()
             .max_solver_time_in_seconds = 100,
             .num_threads = static_cast<int>(std::thread::hardware_concurrency()),
             .max_num_consecutive_invalid_steps = 10,
-            .linear_solver_type = ceres::DENSE_SCHUR, // (DENSE_SCHUR and SPARSE_SCHUR best for BA) http://ceres-solver.org/nnls_solving.html#linear-solvers
+            // .linear_solver_type = ceres::DENSE_SCHUR, // (DENSE_SCHUR and SPARSE_SCHUR best for BA) http://ceres-solver.org/nnls_solving.html#linear-solvers
+            .linear_solver_type = ceres::SPARSE_SCHUR,
             .minimizer_progress_to_stdout = true,
         },
         .printSummary = true,
@@ -59,22 +61,19 @@ int main()
         .matchingOptions = matchingOptions,
         .ransacOptions = ransacOptions,
         .bundleAdjustmentOptions = baOptions,
-        .useEightPoint = false,
+        .useEightPoint = true,
         .useRANSAC = true,
     };
 
     SfM::Scene scene(K, startTransform, sceneOptions);
 
-    std::string pathToImages = "../../Data/TestScene/animation1/"; 
-
-    SfM::io::exportTracksForBlender(scene.getExtrinsics(), scene.get3dPoints(), "../../Data/test_abs_path.txt", "./TestScene/animation1");
-    return 0;
+    std::string pathToImages = "../../Data/TestScene/animation3/";
 
     auto images = SfM::io::loadImages(pathToImages);
     // std::vector<cv::Mat> images;
 
     std::cout << "loaded " << images.size() << " images." << std::endl;
-    for (int i = 0; i < images.size(); i++)
+    for (int i = 0; i < images.size() - 2; i++)
     {
         auto keypoints = SfM::detect::SIFTOpenCv(images[i]);
         std::cout << "Detected: " << keypoints.size() << " keypoints." << std::endl;
@@ -83,9 +82,11 @@ int main()
         scene.pushBackImageWithKeypoints(std::move(img), std::move(keypoints));
     }
 
+    SfM::io::exportTracksForBlender(scene.getExtrinsics(), scene.get3dPoints(), "../../Data/animation3_no_ba.txt", "./TestScene/animation3");
+
     scene.optimizeExtrinsicsAnd3dPoints();
 
-    SfM::io::exportTracksForBlender(scene.getExtrinsics(), scene.get3dPoints(), "../../Data/test_whole_pipeline.txt");
+    SfM::io::exportTracksForBlender(scene.getExtrinsics(), scene.get3dPointsFilterd(), "../../Data/animation3.txt", "./TestScene/animation3");
 
     return 0;
     /*  // Testing

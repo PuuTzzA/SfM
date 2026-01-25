@@ -80,15 +80,38 @@ namespace SfM
                 kpA.trackId = m_currentNumTracks;
                 kpB.trackId = m_currentNumTracks;
 
-                frameA.observations.push_back({.point = kpA.point, .trackId = m_currentNumTracks});
-                frameB.observations.push_back({.point = kpB.point, .trackId = m_currentNumTracks});
+                frameA.observations.push_back(std::make_unique<Observation>(Observation{.point = kpA.point, .trackId = m_currentNumTracks}));
+                kpA.observation = frameA.observations.back().get();
+                frameB.observations.push_back(std::make_unique<Observation>(Observation{.point = kpB.point, .trackId = m_currentNumTracks}));
+                kpB.observation = frameB.observations.back().get();
 
                 m_currentNumTracks++;
             }
             else // existing Track. Add information to kbB
             {
-                kpB.trackId = kpA.trackId;
-                frameB.observations.push_back({.point = kpB.point, .trackId = kpA.trackId});
+                if (kpA.observation != nullptr && !kpA.observation->inlier) // If the obervation was found to be an outlier, create a new TrackId
+                {
+                    kpA.observation->inlier = true; // reset inlier flag for the new track
+                    kpA.observation->wasOutlierBefore = true;
+                    kpA.observation->indexInLastFrame = Observation::UNINITIALIZED;
+                    kpA.observation->trackId = m_currentNumTracks;
+
+                    kpA.trackId = m_currentNumTracks;
+                    kpB.trackId = m_currentNumTracks;
+
+                    // frameA.observations.push_back(std::make_unique<Observation>(Observation{.point = kpA.point, .trackId = m_currentNumTracks}));
+                    // kpA.observation = frameA.observations.back().get();
+                    frameB.observations.push_back(std::make_unique<Observation>(Observation{.point = kpB.point, .trackId = m_currentNumTracks}));
+                    kpB.observation = frameB.observations.back().get();
+
+                    m_currentNumTracks++;
+                }
+                else
+                {
+                    kpB.trackId = kpA.trackId;
+                    frameB.observations.push_back(std::make_unique<Observation>(Observation{.point = kpB.point, .trackId = kpA.trackId}));
+                    kpB.observation = frameB.observations.back().get();
+                }
             }
         };
 
@@ -100,8 +123,11 @@ namespace SfM
         }
         else
         {
-            std::sort(frameB.observations.begin(), frameB.observations.end(), [](const Observation &a, const Observation &b)
-                      { return a.trackId < b.trackId; });
+            std::sort(frameA.observations.begin(), frameA.observations.end(), [](const std::unique_ptr<Observation> &a, const std::unique_ptr<Observation> &b)
+                      { return a->trackId < b->trackId; });
+
+            std::sort(frameB.observations.begin(), frameB.observations.end(), [](const std::unique_ptr<Observation> &a, const std::unique_ptr<Observation> &b)
+                      { return a->trackId < b->trackId; });
         }
 
         if (m_sceneOptions.useEightPoint)
@@ -127,11 +153,13 @@ namespace SfM
         }
         m_extrinsics = std::move(optimized.extrinsics);
         m_points3d = std::move(optimized.points);
+        m_points3dFilterd = std::move(optimized.pointsFiltered);
     }
 
     void Scene::initializeEgithPointVariables()
     {
         m_points3d.resize(m_currentNumTracks, Vec3::Zero());
+        m_point3dCounts.resize(m_currentNumTracks, 0);
         m_extrinsics.push_back(m_accumulatedPose);
     }
 
@@ -148,6 +176,7 @@ namespace SfM
         }
 
         m_points3d.resize(m_currentNumTracks, Vec3::Zero());
+        m_point3dCounts.resize(m_currentNumTracks, 0);
         int n = m_frames.size() - 1;
 
         // Reset and move points
@@ -161,19 +190,20 @@ namespace SfM
         m_trackIndices23.clear();
 
         std::vector<int> indicesOfNewerObservations; // used to find the observations in frame.observations to set the inlier flag to 0
+        std::vector<int> indicesOfOlderObservations;
 
         int j = 0; // dont reset j every iteration because the observations are sorted by trackId
         // for (auto &observation : m_frames[n].observations)
         for (int i = 0, max = m_frames[n].observations.size(); i < max; i++)
         {
-            Observation &observation = m_frames[n].observations[i];
+            Observation &observation = *m_frames[n].observations[i];
 
             // Find the matching observation in the prevous frame
             if (observation.indexInLastFrame == Observation::UNINITIALIZED)
             {
-                while (m_frames[n - 1].observations[j].trackId <= observation.trackId && j < m_frames[n - 1].observations.size())
+                while (j < m_frames[n - 1].observations.size() && m_frames[n - 1].observations[j]->trackId <= observation.trackId)
                 {
-                    if (m_frames[n - 1].observations[j].trackId == observation.trackId)
+                    if (m_frames[n - 1].observations[j]->trackId == observation.trackId)
                     {
                         observation.indexInLastFrame = j;
                         j++;
@@ -192,18 +222,19 @@ namespace SfM
                 continue;
             }
 
-            if (!m_frames[n - 1].observations[observation.indexInLastFrame].inlier)
+            if (!m_frames[n - 1].observations[observation.indexInLastFrame]->inlier)
             {
                 continue;
             }
 
-            Vec2 o1 = m_frames[n - 1].observations[observation.indexInLastFrame].point;
+            Vec2 o1 = m_frames[n - 1].observations[observation.indexInLastFrame]->point;
             Vec2 o2 = observation.point;
             m_shared23points2.push_back(normalizePoints(o1));
             m_shared23points3.push_back(normalizePoints(o2));
             m_trackIndices23.push_back(observation.trackId);
 
             indicesOfNewerObservations.push_back(i);
+            indicesOfOlderObservations.push_back(observation.indexInLastFrame);
         }
 
         // Calculate new pose and points
@@ -214,6 +245,7 @@ namespace SfM
         else
         {
             auto inliers = solve::RANSAC(m_shared23points2, m_shared23points3, m_K, m_sceneOptions.ransacOptions);
+            std::sort(inliers.begin(), inliers.end());
 
             if (inliers.size() >= 8)
             {
@@ -221,8 +253,9 @@ namespace SfM
                 std::vector<Vec2> inliers2;
                 std::vector<int> inliersTrackIndeces;
 
-                std::vector<Observation> &newObs = m_frames[n].observations;
-                std::vector<bool> inlierMask(newObs.size(), false);
+                auto &newObs = m_frames[n].observations;
+                auto &oldObs = m_frames[n - 1].observations;
+                std::vector<bool> inlierMask(indicesOfNewerObservations.size(), false);
 
                 for (const auto &i : inliers)
                 {
@@ -232,9 +265,14 @@ namespace SfM
                     inliersTrackIndeces.push_back(m_trackIndices23[i]);
                 }
 
-                for (int i = 0, max = newObs.size(); i < max; i++)
+                for (int i = 0, max = inlierMask.size(); i < max; i++)
                 {
-                    newObs[i].inlier = inlierMask[i];
+                    newObs[indicesOfNewerObservations[i]]->inlier = inlierMask[i];
+
+                    if (oldObs[indicesOfOlderObservations[i]]->wasOutlierBefore && inlierMask[i] == false)
+                    {
+                        oldObs[indicesOfOlderObservations[i]]->inlier = false;
+                    }
                 }
 
                 m_frame23 = solve::eightPointAlgorithm(inliers1, inliers2);
@@ -258,60 +296,99 @@ namespace SfM
             int numInAllThree = 0;
             for (int idx23 = 0; idx23 < m_trackIndices23.size(); idx23++)
             {
-                bool inAllThree = false;
-                while (m_trackIndices12[idx12] <= m_trackIndices23[idx23] && idx12 < m_trackIndices12.size())
+                int currentTrackId = m_trackIndices23[idx23];
+
+                while (idx12 < m_trackIndices12.size() && m_trackIndices12[idx12] < currentTrackId)
                 {
-                    if (m_trackIndices12[idx12] == m_trackIndices23[idx23])
-                    {
-                        inAllThree = true;
-                        idx12++;
-                        break;
-                    }
                     idx12++;
                 }
 
-                if (!inAllThree)
+                if (idx12 >= m_trackIndices12.size())
                 {
-                    continue;
+                    break;
                 }
 
-                numInAllThree++;
-
-                Vec3 match12Cam1 = m_frame12.points[idx12 - 1]; // minus one since idx12 is always incremented
-                Vec3 match23Cam2 = m_frame23.points[idx23];     // idx23 is the current loop index
-
-                Vec3 match12Cam2 = (m_frame12.pose * match12Cam1.homogeneous()).head<3>();
-
-                REAL dist12 = match12Cam2.norm();
-                REAL dist23 = match23Cam2.norm();
-
-                if (dist23 > EPSILON)
+                if (m_trackIndices12[idx12] == currentTrackId)
                 {
-                    ratios.push_back(dist12 / dist23);
+                    numInAllThree++;
+
+                    Vec3 pointCam1Frame12 = m_frame12.points[idx12];
+                    Vec3 pointCam2Frame12 = (m_frame12.pose * pointCam1Frame12.homogeneous()).head<3>();
+
+                    Vec3 pointCam2Frame23 = m_frame23.points[idx23];
+
+                    REAL dist12 = pointCam2Frame12.norm();
+                    REAL dist23 = pointCam2Frame23.norm();
+
+                    if (dist23 > 0.1 && dist12 > 0.1 && dist23 < 100.0 && dist12 < 100.0)
+                    {
+                        ratios.push_back(dist12 / dist23);
+                    }
                 }
             }
 
-            m_accumulatedScale *= getMedian(ratios);
-            std::cout << "Matching Frame" << n - 2 << n - 1 << " and Frame" << n - 1 << n << ", Accumulated Scale: " << m_accumulatedScale << ", Matching points: " << numInAllThree << std::endl;
+            if (ratios.size() >= 5)
+            {
+                REAL relativeScale = getMedian(ratios);
+
+                if (relativeScale >= 0.1 && relativeScale < 10)
+                {
+                    m_accumulatedScale *= relativeScale;
+                }
+            }
+
+            if (m_sceneOptions.verbose)
+            {
+                std::cout << "Matching Frame" << n << "' scale to previous frames, Accumulated Scale: " << m_accumulatedScale << ", Matching points: " << numInAllThree << std::endl;
+            }
         }
 
         Mat4 viewMat = m_frame23.pose;
         viewMat.block<3, 1>(0, 3) *= m_accumulatedScale;
 
+        REAL translationLength = viewMat.block<3, 1>(0, 3).norm();
+        if (translationLength > m_sceneOptions.maxTranslationPerFrame)
+        {
+            std::cerr << "WARNING: Translation length exceeded length of " << m_sceneOptions.maxTranslationPerFrame << ", was: " << translationLength << "\n";
+            std::cerr << "Rescaled translation to ||translation|| = " << m_sceneOptions.maxTranslationPerFrame << std::endl;
+            viewMat.block<3, 1>(0, 3) *= (m_sceneOptions.maxTranslationPerFrame / translationLength);
+        }
+
         for (int j = 0; j < m_frame23.points.size(); j++)
         {
+            int trackId = m_trackIndices23[j];
+
+            if (m_frame23.points[j][2] < 0) // point behind the camera, bad triangulation
+            {
+                continue;
+            }
+
+            Vec3 newPointGlobal = (m_accumulatedPose * (m_accumulatedScale * m_frame23.points[j]).homogeneous()).head<3>();
+
+            if (m_point3dCounts[trackId] == 0)
+            {
+                m_points3d[trackId] = newPointGlobal;
+                m_point3dCounts[trackId] = 1;
+            }
+            else // Update 3d point using a running average
+            {
+                if ((m_points3d[trackId] - newPointGlobal).norm() < 50.0)
+                {
+                    int N = m_point3dCounts[trackId];
+
+                    Vec3 oldPoint = m_points3d[trackId];
+                    m_points3d[trackId] = oldPoint + (newPointGlobal - oldPoint) / static_cast<REAL>(N + 1);
+
+                    m_point3dCounts[trackId]++;
+                }
+            }
+
             /* if (m_trackIndices23[j] == 0)
             {
                 std::cout << "1 point with an error of: " << std::sqrt(reprojectionError(m_K, m_shared23points2[j], m_frame23.points[j], Mat4::Identity())) << std::endl;
                 std::cout << "2 point with an error of: " << std::sqrt(reprojectionError(m_K, m_shared23points3[j], m_frame23.points[j], m_frame23.pose)) << std::endl;
                 std::cout << "eightPointError of: " << eightPointError(m_frame23.pose, m_shared23points2[j], m_shared23points3[j]) << std::endl;
             } */
-
-            // Add the 3d point if it is new
-            if (m_points3d[m_trackIndices23[j]] == Vec3::Zero())
-            {
-                m_points3d[m_trackIndices23[j]] = (m_accumulatedPose * (m_accumulatedScale * m_frame23.points[j]).homogeneous()).head<3>();
-            }
         }
 
         m_extrinsics.push_back(m_accumulatedPose *= viewMat.inverse());
@@ -320,7 +397,7 @@ namespace SfM
     void Scene::addFrameWithoutMatching(Frame &&frame, const int newNumTotTracks)
     {
         m_currentNumTracks = newNumTotTracks;
-        m_frames.push_back(frame);
+        m_frames.push_back(std::move(frame));
 
         if (m_frames.size() == 1)
         {
@@ -338,6 +415,22 @@ namespace SfM
     std::vector<Vec3> &Scene::get3dPoints()
     {
         return m_points3d;
+    };
+
+    std::vector<Vec3> &Scene::get3dPointsFilterd()
+    {
+        if (m_points3dFilterd.size() > 0)
+        {
+            return m_points3dFilterd;
+        }
+        for (const auto &p : m_points3d)
+        {
+            if (p != Vec3::Zero())
+            {
+                m_points3dFilterd.push_back(p);
+            }
+        }
+        return m_points3dFilterd;
     };
 
     REAL Scene::getMedian(std::vector<REAL> &v)
