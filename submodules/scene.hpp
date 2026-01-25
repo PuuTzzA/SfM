@@ -41,9 +41,11 @@ namespace SfM
 
         void setK(const Mat3 K);
         void setStartTransform(const Mat4 startTransform);
+        void setSceneOptions(SCENE_OPTIONS sceneOptions);
         void setMatchingOptions(match::MATCHING_OPTIONS matchingOptions);
         void setUseRANSAC(bool useRANSAC);
         void setRANSACOptions(solve::RANSAC_OPTIONS ransacOptions);
+        void setBundleAdjustmentOptions(solve::BUNDLE_ADJUSTMENT_OPTIONS bundleAdjustmentOptions);
         std::vector<Mat4> &getExtrinsics();
         std::vector<Vec3> &get3dPoints();
         /**

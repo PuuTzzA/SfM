@@ -32,7 +32,7 @@ namespace SfM::solve
 
             if (ceres::abs(p[2]) < T(EPSILON))
             {
-                std::cout << "dangerous division in operator()" << std::endl;
+                // std::cout << "dangerous division in operator()" << std::endl;
                 p[2] = T(EPSILON);
             }
 
@@ -147,7 +147,7 @@ namespace SfM::solve
 
         if (options.printSummary)
         {
-            std::cout << "BUNDLE ADJUSTMENT: Running Bundle Adjustment on " << std::thread::hardware_concurrency() << " threads." << std::endl;
+            std::cout << "BUNDLE ADJUSTMENT: Ran Bundle Adjustment on " << std::thread::hardware_concurrency() << " threads." << std::endl;
             std::cout << summary.FullReport() << "\n";
         }
 

@@ -173,10 +173,10 @@ namespace SfM::detect
         }
 
         // --- Optional: Visualization to verify it worked ---
-        cv::Mat output_img;
-        cv::drawKeypoints(image, keypointsCv, output_img, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        // cv::Mat output_img;
+        // cv::drawKeypoints(image, keypointsCv, output_img, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
         // cv::imshow("SIFT Keypoints", output_img);
-        cv::imwrite(("../../Data/siftImg_" + std::to_string(c++) + ".png"), output_img);
+        // cv::imwrite(("../../Data/siftImg_" + std::to_string(c++) + ".png"), output_img);
 
         return resKeypoints;
     }

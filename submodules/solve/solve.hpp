@@ -132,7 +132,7 @@ namespace SfM::solve
      *
      * @return Vector of indices of inliers
      */
-    std::vector<int> RANSAC(const std::vector<Vec2> &x, const std::vector<Vec2> &y, const Mat3 &K, const RANSAC_OPTIONS &options);
+    std::vector<int> RANSAC(const std::vector<Vec2> &x, const std::vector<Vec2> &y, const Mat3 &K, const RANSAC_OPTIONS &options, const bool verbose);
 
     /**
      * @brief Computes the thing that gets minimized in the 8 point algorithm. Namely: x2^T * E * x1 = 0

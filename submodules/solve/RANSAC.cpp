@@ -143,7 +143,7 @@ namespace SfM::solve
         return bestInliers;
     }
 
-    std::vector<int> RANSAC(const std::vector<Vec2> &x, const std::vector<Vec2> &y, const Mat3 &K, const RANSAC_OPTIONS &options)
+    std::vector<int> RANSAC(const std::vector<Vec2> &x, const std::vector<Vec2> &y, const Mat3 &K, const RANSAC_OPTIONS &options, const bool verbose)
     {
         if (x.size() != y.size() || x.size() < options.minN)
             return {};
@@ -248,7 +248,10 @@ namespace SfM::solve
                                           if (succesProb >= EPSILON)
                                           {
                                               int newMax = safeCastToInt(std::ceil(std::log(1. - options.successProb) / std::log(1 - succesProb)));
-                                              std::cout << "RANSAC: found better model with " << bestInliers.size() << " inliers that have a total error of " << currentTotError << ", maxIter adjusted to " << newMax << ".\n";
+                                              if (verbose)
+                                              {
+                                                  std::cout << "RANSAC: found better model with " << bestInliers.size() << " inliers that have a total error of " << currentTotError << ", maxIter adjusted to " << std::min(newMax, maxIter.load()) << ".\n";
+                                              }
                                               if (newMax < maxIter.load())
                                               {
                                                   maxIter.store(newMax);
@@ -259,8 +262,10 @@ namespace SfM::solve
                               }
                           });
 
-        std::cout << "RANSAC: finished after " << iterationsDone << " iterations." << std::endl;
+        if (verbose)
+        {
+            std::cout << "RANSAC: finished after " << iterationsDone << " iterations (" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() << "ms)." << std::endl;
+        }
         return bestInliers;
     }
-
 } // namespace SfM::solve

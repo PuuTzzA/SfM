@@ -63,6 +63,7 @@ int main()
         .bundleAdjustmentOptions = baOptions,
         .useEightPoint = true,
         .useRANSAC = true,
+        .verbose = true,
     };
 
     SfM::Scene scene(K, startTransform, sceneOptions);
@@ -81,8 +82,6 @@ int main()
 
         scene.pushBackImageWithKeypoints(std::move(img), std::move(keypoints));
     }
-
-    SfM::io::exportTracksForBlender(scene.getExtrinsics(), scene.get3dPoints(), "../../Data/animation3_no_ba.txt", "./TestScene/animation3");
 
     scene.optimizeExtrinsicsAnd3dPoints();
 

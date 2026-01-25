@@ -21,6 +21,11 @@ namespace SfM
         m_accumulatedPose = startTransform;
     };
 
+    void Scene::setSceneOptions(SCENE_OPTIONS sceneOptions)
+    {
+        m_sceneOptions = sceneOptions;
+    }
+
     void Scene::setMatchingOptions(match::MATCHING_OPTIONS matchingOptions)
     {
         m_sceneOptions.matchingOptions = matchingOptions;
@@ -35,6 +40,11 @@ namespace SfM
     {
         m_sceneOptions.ransacOptions = ransacOptions;
     };
+
+    void Scene::setBundleAdjustmentOptions(solve::BUNDLE_ADJUSTMENT_OPTIONS bundleAdjustmentOptions)
+    {
+        m_sceneOptions.bundleAdjustmentOptions = bundleAdjustmentOptions;
+    }
 
     void Scene::pushBackImageWithKeypoints(cv::Mat &&image, std::vector<Keypoint> &&keypoints)
     {
@@ -67,13 +77,10 @@ namespace SfM
         Frame &frameA = m_frames[lastIndex - 1];
         Frame &frameB = m_frames[lastIndex];
 
-        std::vector<std::vector<Vec2>> tracks;
         for (const auto &[idxA, idxB] : matches)
         {
             Keypoint &kpA = m_keypoints[lastIndex - 1][idxA];
             Keypoint &kpB = m_keypoints[lastIndex][idxB];
-
-            tracks.push_back({kpA.point, kpB.point});
 
             if (kpA.trackId == Keypoint::UNINITIALIZED) // new Track
             {
@@ -99,8 +106,6 @@ namespace SfM
                     kpA.trackId = m_currentNumTracks;
                     kpB.trackId = m_currentNumTracks;
 
-                    // frameA.observations.push_back(std::make_unique<Observation>(Observation{.point = kpA.point, .trackId = m_currentNumTracks}));
-                    // kpA.observation = frameA.observations.back().get();
                     frameB.observations.push_back(std::make_unique<Observation>(Observation{.point = kpB.point, .trackId = m_currentNumTracks}));
                     kpB.observation = frameB.observations.back().get();
 
@@ -115,7 +120,7 @@ namespace SfM
             }
         };
 
-        util::drawCollageWithTracks({m_images[lastIndex - 1], m_images[lastIndex]}, tracks, 0, 2, "../../Data/found_tracks_" + std::to_string(lastIndex) + ".png");
+        // util::drawCollageWithTracks({m_images[lastIndex - 1], m_images[lastIndex]}, tracks, 0, 2, "../../Data/found_tracks_" + std::to_string(lastIndex) + ".png");
 
         if (lastIndex == 1) // For the first two frames the observations are already in order
         {
@@ -244,7 +249,7 @@ namespace SfM
         }
         else
         {
-            auto inliers = solve::RANSAC(m_shared23points2, m_shared23points3, m_K, m_sceneOptions.ransacOptions);
+            auto inliers = solve::RANSAC(m_shared23points2, m_shared23points3, m_K, m_sceneOptions.ransacOptions, m_sceneOptions.verbose);
             std::sort(inliers.begin(), inliers.end());
 
             if (inliers.size() >= 8)
@@ -339,7 +344,7 @@ namespace SfM
 
             if (m_sceneOptions.verbose)
             {
-                std::cout << "Matching Frame" << n << "' scale to previous frames, Accumulated Scale: " << m_accumulatedScale << ", Matching points: " << numInAllThree << std::endl;
+                std::cout << "Scene::solveForLastAddedFrame: Matching scale between frame " << n << " and previous frames, Accumulated Scale: " << m_accumulatedScale << ", Matching points: " << numInAllThree << std::endl;
             }
         }
 
