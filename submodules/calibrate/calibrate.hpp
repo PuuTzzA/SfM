@@ -8,6 +8,7 @@
 namespace SfM::calibrate {
 
     struct CameraCalibration {
+        Mat3 K;
         cv::Mat matrix;
         cv::Mat distortionCoeffs;
     };

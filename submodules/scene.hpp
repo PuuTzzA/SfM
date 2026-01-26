@@ -11,8 +11,9 @@ namespace SfM
      * @brief Options to control the behaviour of the scene
      * @param matchingOptions Options for the keypoint matching between frames
      * @param ransacOptions Options for RANSAC used in the eight point algorithm
-     * @param 
+     * @param bundleAdjustmentOptions Options for the bundle adjustment step
      * @param useEightPoint Bool to turn of matching with the eight point algorihtm (and therefore also finding outliers with RANSAC)
+     * @param breakTracks Bool to turn of automatic creation of new tracks if an outlier was detected
      * @param useRANSAC Bool to turn off RANSAC
      * @param verbose Bool to turn off debug information
      * @param maxTranslationPerFrame Maximal distance the camera can travel between frames
@@ -23,6 +24,7 @@ namespace SfM
         solve::RANSAC_OPTIONS ransacOptions;
         solve::BUNDLE_ADJUSTMENT_OPTIONS bundleAdjustmentOptions;
         bool useEightPoint = true;
+        bool breakTracks = true;
         bool useRANSAC = true;
         bool verbose = true;
         REAL maxTranslationPerFrame = 15;
@@ -46,6 +48,8 @@ namespace SfM
         void setUseRANSAC(bool useRANSAC);
         void setRANSACOptions(solve::RANSAC_OPTIONS ransacOptions);
         void setBundleAdjustmentOptions(solve::BUNDLE_ADJUSTMENT_OPTIONS bundleAdjustmentOptions);
+        Mat3 getK();
+        std::vector<cv::Mat> &getImages();
         std::vector<Mat4> &getExtrinsics();
         std::vector<Vec3> &get3dPoints();
         /**

@@ -1,9 +1,95 @@
 #include "blender.hpp"
 #include "../util/util.hpp"
+#include "../../external/nlohmann/json.hpp"
 
 namespace SfM::io
 {
-    void exportTracksForBlender(std::vector<Mat4> &cameraExtrinsics, std::vector<Vec3> &points, std::string path, std::string pathToImages)
+    void exportTracksForBlender(int width,
+                                int height,
+                                Mat3 K,
+                                std::vector<Mat4> &cameraExtrinsics,
+                                std::vector<Vec3> &points,
+                                std::string path,
+                                std::string pathToImages)
+    {
+        using json = nlohmann::ordered_json;
+
+        // General information
+        json jsonFile{};
+        jsonFile["width"] = width;
+        jsonFile["height"] = height;
+
+        if (pathToImages != "")
+        {
+            jsonFile["pathToImages"] = pathToImages;
+        }
+
+        // Camera information
+        json intrinsics = json::array();
+        for (int i = 0; i < K.rows(); ++i)
+        {
+            for (int j = 0; j < K.cols(); ++j)
+            {
+                intrinsics.push_back(K(i, j));
+            }
+        }
+        jsonFile["K"] = intrinsics;
+
+        // Scene information
+        json extrinsicsArray = json::array();
+        for (const auto &pose : cameraExtrinsics)
+        {
+            json extrinsics = json::array();
+            Mat4 poseWorld = util::cvCameraToBlender(pose);
+            for (int i = 0; i < poseWorld.rows(); ++i)
+            {
+                for (int j = 0; j < poseWorld.cols(); ++j)
+                {
+                    extrinsics.push_back(poseWorld(i, j));
+                }
+            }
+            extrinsicsArray.push_back(extrinsics);
+        }
+        jsonFile["extrinsics"] = extrinsicsArray;
+
+        json pointArray = json::array();
+        for (const auto &p : points)
+        {
+            json point = json::array();
+            Vec3 pWorld = util::blendCvMat3() * p;
+            point.push_back(pWorld[0]);
+            point.push_back(pWorld[1]);
+            point.push_back(pWorld[2]);
+            pointArray.push_back(point);
+        }
+        jsonFile["points"] = pointArray;
+
+        // Save to file
+        std::ofstream out(path, std::ios::trunc); // trunc ensures overwrite
+        if (!out.is_open())
+        {
+            std::cerr << "Error: Could not open file " << path << " for writing." << std::endl;
+            return;
+        }
+
+        out << jsonFile.dump(4);
+        out.close();
+        std::cout << "Exported " << cameraExtrinsics.size() << " frames and "
+                  << points.size() << " points to " << path << std::endl;
+    };
+
+    void exportSceneForBlender(Scene &scene, std::string path, std::string pathToImages)
+    {
+        exportTracksForBlender(scene.getImages()[0].cols,
+                               scene.getImages()[0].rows,
+                               scene.getK(),
+                               scene.getExtrinsics(),
+                               scene.get3dPointsFilterd(),
+                               path,
+                               pathToImages);
+    }
+
+    void exportTracksForBlenderOld(std::vector<Mat4> &cameraExtrinsics, std::vector<Vec3> &points, std::string path, std::string pathToImages)
     {
         std::ofstream out(path, std::ios::trunc); // trunc ensures overwrite
         if (!out.is_open())

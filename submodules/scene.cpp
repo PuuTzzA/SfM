@@ -96,7 +96,7 @@ namespace SfM
             }
             else // existing Track. Add information to kbB
             {
-                if (kpA.observation != nullptr && !kpA.observation->inlier) // If the obervation was found to be an outlier, create a new TrackId
+                if (m_sceneOptions.breakTracks && kpA.observation != nullptr && !kpA.observation->inlier) // If the obervation was found to be an outlier, create a new TrackId
                 {
                     kpA.observation->inlier = true; // reset inlier flag for the new track
                     kpA.observation->wasOutlierBefore = true;
@@ -410,6 +410,16 @@ namespace SfM
             return;
         }
         solveForLastAddedFrame();
+    }
+
+    Mat3 Scene::getK()
+    {
+        return m_K;
+    }
+
+    std::vector<cv::Mat> &Scene::getImages()
+    {
+        return m_images;
     }
 
     std::vector<Mat4> &Scene::getExtrinsics()

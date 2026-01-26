@@ -15,9 +15,25 @@
 #include <chrono>
 #include <numeric>
 
+// #define CALIBRATION
+
 int main()
 {
-    SfM::REAL width_px = 1920.;
+#ifdef CALIBRATION
+    std::string pathToImages = "../../Data/S21/calibration_small/";
+    auto images = SfM::io::loadImages(pathToImages);
+    std::cout << "image count: " << images.size() << std::endl;
+
+    SfM::io::storeCalibration("../../Data/S21/calibration.json", SfM::calibrate::calibrateCamera(images));
+
+    auto calibration = SfM::io::loadCalibration("../../Data/S21/calibration.json");
+
+    std::cout << "Camera Matrix:\n"
+              << calibration.matrix << std::endl;
+    std::cout << "Distortion Coefficients:\n"
+              << calibration.distortionCoeffs << std::endl;
+#else
+    /* SfM::REAL width_px = 1920.;
     SfM::REAL height_px = 1080.;
     SfM::REAL f_mm = 50.;
     SfM::REAL sensor_mm = 36.f;
@@ -30,7 +46,12 @@ int main()
     SfM::Mat3 K;
     K << fx, 0, cx,
         0, fy, cy,
-        0, 0, 1;
+        0, 0, 1; */
+
+    auto calibration = SfM::io::loadCalibration("../../Data/S21/calibration.json");
+    SfM::Mat3 K = calibration.K;
+
+    std::cout << K << std::endl;
 
     SfM::Mat4 startTransform = SfM::util::cvCameraToBlender(SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)));
     // SfM::Mat4 startTransform = SfM::Mat4::Identity();
@@ -62,31 +83,35 @@ int main()
         .ransacOptions = ransacOptions,
         .bundleAdjustmentOptions = baOptions,
         .useEightPoint = true,
+        .breakTracks = false,
         .useRANSAC = true,
         .verbose = true,
     };
 
     SfM::Scene scene(K, startTransform, sceneOptions);
 
-    std::string pathToImages = "../../Data/TestScene/animation3/";
+    std::string pathToImages = "../../Data/S21/tisch_small/";
 
     auto images = SfM::io::loadImages(pathToImages);
-    // std::vector<cv::Mat> images;
+
+    for (auto &img : images)
+    {
+        img = SfM::calibrate::undistort(img, calibration);
+    }
 
     std::cout << "loaded " << images.size() << " images." << std::endl;
-    for (int i = 0; i < images.size() - 2; i++)
+    for (int i = 0; i < images.size() - 28; i++)
     {
         auto keypoints = SfM::detect::SIFTOpenCv(images[i]);
         std::cout << "Detected: " << keypoints.size() << " keypoints." << std::endl;
-        auto img = cv::imread("../../Data/siftImg_" + std::to_string(i) + ".png");
 
-        scene.pushBackImageWithKeypoints(std::move(img), std::move(keypoints));
+        scene.pushBackImageWithKeypoints(std::move(images[i]), std::move(keypoints));
     }
 
     scene.optimizeExtrinsicsAnd3dPoints();
 
-    SfM::io::exportTracksForBlender(scene.getExtrinsics(), scene.get3dPointsFilterd(), "../../Data/animation3.txt", "./TestScene/animation3");
-
+    SfM::io::exportSceneForBlender(scene, "../../Data/S21/tisch_small.json", "./tisch_small");
+#endif
     return 0;
     /*  // Testing
      auto images = SfM::io::loadImages("../calibration_data/test_dir");

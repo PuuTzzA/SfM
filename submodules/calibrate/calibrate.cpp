@@ -4,8 +4,8 @@ namespace SfM::calibrate {
 
     CameraCalibration calibrateCamera(const std::vector<cv::Mat>& images) {
 
-        cv::Size boardSize{10, 7};
-        float squareSize = 1.0f;
+        cv::Size boardSize{6, 8};
+        float squareSize = 3.0f;
 
         std::cout << "Setting object points\n";
         std::vector<cv::Point3f> objectPoints{};
@@ -26,7 +26,7 @@ namespace SfM::calibrate {
 
             std::vector<cv::Point2f> corners;
 
-            std::cout << "Finding chessboard corners\n";
+            std::cout << "Finding chessboard corners, image size: " << image.rows << ", " << image.cols << "\n";
             bool found = cv::findChessboardCorners(image, boardSize, corners, cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_NORMALIZE_IMAGE);
             std::cout << "Found: " << found << std::endl;
             if(!found)

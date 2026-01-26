@@ -219,6 +219,7 @@ namespace SfM::io
 
         cv::Matx33d cvMatrix{};
         cv::Vec<double, 5> cvDistCoeffs{};
+        Mat3 K;
 
         for (int i = 0; i < 5; i++)
         {
@@ -229,10 +230,11 @@ namespace SfM::io
         {
             for (int j = 0; j < 3; j++)
             {
+                K(i, j) = matrix[i][j];
                 cvMatrix(i, j) = matrix[i][j];
             }
         }
 
-        return calibrate::CameraCalibration{cv::Mat{cvMatrix}, cv::Mat{cvDistCoeffs}};
+        return calibrate::CameraCalibration{K, cv::Mat{cvMatrix}, cv::Mat{cvDistCoeffs}};
     }
 } // Namespace SfM::io
