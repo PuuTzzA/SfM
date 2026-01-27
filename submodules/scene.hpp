@@ -13,7 +13,7 @@ namespace SfM
      * @param ransacOptions Options for RANSAC used in the eight point algorithm
      * @param bundleAdjustmentOptions Options for the bundle adjustment step
      * @param useEightPoint Bool to turn of matching with the eight point algorihtm (and therefore also finding outliers with RANSAC)
-     * @param breakTracks Bool to turn of automatic creation of new tracks if an outlier was detected
+     * @param splitTracks Bool to turn of automatic creation of new tracks if an outlier was detected
      * @param useRANSAC Bool to turn off RANSAC
      * @param verbose Bool to turn off debug information
      * @param maxTranslationPerFrame Maximal distance the camera can travel between frames
@@ -24,7 +24,7 @@ namespace SfM
         solve::RANSAC_OPTIONS ransacOptions;
         solve::BUNDLE_ADJUSTMENT_OPTIONS bundleAdjustmentOptions;
         bool useEightPoint = true;
-        bool breakTracks = true;
+        bool splitTracks = false;
         bool useRANSAC = true;
         bool verbose = true;
         REAL maxTranslationPerFrame = 15;

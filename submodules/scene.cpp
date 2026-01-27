@@ -96,7 +96,7 @@ namespace SfM
             }
             else // existing Track. Add information to kbB
             {
-                if (m_sceneOptions.breakTracks && kpA.observation != nullptr && !kpA.observation->inlier) // If the obervation was found to be an outlier, create a new TrackId
+                if (m_sceneOptions.splitTracks && kpA.observation != nullptr && !kpA.observation->inlier) // If the obervation was found to be an outlier, create a new TrackId
                 {
                     kpA.observation->inlier = true; // reset inlier flag for the new track
                     kpA.observation->wasOutlierBefore = true;
@@ -223,11 +223,6 @@ namespace SfM
             }
 
             if (observation.indexInLastFrame == Observation::NOT_FOUND)
-            {
-                continue;
-            }
-
-            if (!m_frames[n - 1].observations[observation.indexInLastFrame]->inlier)
             {
                 continue;
             }

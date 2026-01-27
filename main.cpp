@@ -57,12 +57,12 @@ int main()
     // SfM::Mat4 startTransform = SfM::Mat4::Identity();
 
     SfM::match::MATCHING_OPTIONS matchingOptions{
-        .threshold = 0.9,
+        .threshold = 0.95,
     };
     SfM::solve::RANSAC_OPTIONS ransacOptions{
         .maxIter = 2048 * 4,
         .maxTimeMs = 20000,
-        .maxSquaredError = 2,
+        .maxSquaredError = 1,
         .successProb = 0.999,
     };
     SfM::solve::BUNDLE_ADJUSTMENT_OPTIONS baOptions{
@@ -82,8 +82,8 @@ int main()
         .matchingOptions = matchingOptions,
         .ransacOptions = ransacOptions,
         .bundleAdjustmentOptions = baOptions,
-        .useEightPoint = true,
-        .breakTracks = false,
+        .useEightPoint = false,
+        .splitTracks = false,
         .useRANSAC = true,
         .verbose = true,
     };
@@ -100,7 +100,7 @@ int main()
     }
 
     std::cout << "loaded " << images.size() << " images." << std::endl;
-    for (int i = 0; i < images.size() - 28; i++)
+    for (int i = 0; i < images.size(); i++)
     {
         auto keypoints = SfM::detect::SIFTOpenCv(images[i]);
         std::cout << "Detected: " << keypoints.size() << " keypoints." << std::endl;
