@@ -12,7 +12,7 @@ namespace SfM::match
         switch (options.algorithm)
         {
         case matchingAlgorithm::TWO_SIDED_MATHICHNG:
-            result = matchTwoSided(keypoints1, keypoints2, options.threshold, options.similarityMetric);
+            result = matchTwoSided(keypoints1, keypoints2, options);
             break;
         default:
             throw std::invalid_argument("Match: Unknown matching algorithm. Was " + options.algorithm);
@@ -21,7 +21,7 @@ namespace SfM::match
         return result;
     };
 
-    std::vector<std::tuple<int, int>> matchTwoSided(const std::vector<Keypoint> &keypoints1, const std::vector<Keypoint> &keypoints2, float threshhold, similarityFunction similarityFunction)
+    std::vector<std::tuple<int, int>> matchTwoSided(const std::vector<Keypoint> &keypoints1, const std::vector<Keypoint> &keypoints2, const MATCHING_OPTIONS &options)
     {
         int lenA = keypoints1.size();
         int lenB = keypoints2.size();
@@ -39,8 +39,10 @@ namespace SfM::match
 
             for (int idx1 = 0; idx1 < lenA; idx1++)
             {
-                float similarity = similarityFunction(keypoints1[idx1].descriptor, keypoints2[idx2].descriptor);
-                if (similarity > threshhold)
+                auto &kp1 = keypoints1[idx1];
+                auto &kp2 = keypoints2[idx2];
+                float similarity = options.similarityMetric(kp1.descriptor, kp2.descriptor);
+                if (similarity > options.threshold && (kp1.point - kp2.point).squaredNorm() < options.maxDistancePxSquared)
                 {
                     mat(idx1, idx2) = similarity;
 

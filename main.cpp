@@ -58,6 +58,7 @@ int main()
 
     SfM::match::MATCHING_OPTIONS matchingOptions{
         .threshold = 0.95,
+        .maxDistancePxSquared = 100 * 100,
     };
     SfM::solve::RANSAC_OPTIONS ransacOptions{
         .maxIter = 2048 * 4,
@@ -82,7 +83,7 @@ int main()
         .matchingOptions = matchingOptions,
         .ransacOptions = ransacOptions,
         .bundleAdjustmentOptions = baOptions,
-        .useEightPoint = false,
+        .useEightPoint = true,
         .splitTracks = false,
         .useRANSAC = true,
         .verbose = true,

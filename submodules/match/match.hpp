@@ -50,12 +50,14 @@ namespace SfM::match
      * @param algorithm Matching algorithm used (default = two sided matching)
      * @param similarityMetric Function to calculate the similarity between two descriptiors (default = cosine similarity)
      * @param threshold Minimal threshold to count a match
+     * @param maxDistancePxSquared Maximal squared distance in px that two features can be from each other to still count as a match
      */
     struct MATCHING_OPTIONS
     {
         matchingAlgorithm algorithm = matchingAlgorithm::TWO_SIDED_MATHICHNG;
         similarityFunction similarityMetric = cosineSimilarity;
         float threshold = 0.5f;
+        float maxDistancePxSquared = 10000 * 10000;
     };
 
     /**
@@ -76,7 +78,7 @@ namespace SfM::match
      * @param similarityFunction Function that computes a similarity measure between two vectors (default cosine similarity)
      * @return Vector of matches (<int, int> = index in first, index in second)
      */
-    std::vector<std::tuple<int, int>> matchTwoSided(const std::vector<Keypoint> &keypoints1, const std::vector<Keypoint> &keypoints2, float threshold = 0.5, similarityFunction similarityFunction = cosineSimilarity);
+    std::vector<std::tuple<int, int>> matchTwoSided(const std::vector<Keypoint> &keypoints1, const std::vector<Keypoint> &keypoints2, const MATCHING_OPTIONS &options);
 
     // vl hungarian method
 
