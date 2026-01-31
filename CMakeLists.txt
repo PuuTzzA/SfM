@@ -1,20 +1,21 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(SfM LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(SfM 
     main.cpp
+    submodules/scene.cpp
     submodules/calibrate/calibrate.cpp
     submodules/detect/detect.cpp
     submodules/detect/detectOpenCv.cpp
     submodules/io/file.cpp
     submodules/io/blender.cpp
+    submodules/match/match.cpp
     submodules/solve/bundleAdjustment.cpp
     submodules/solve/eightPoint.cpp
     submodules/solve/RANSAC.cpp
-    submodules/solve/scene.cpp
     submodules/test/generate.cpp
     submodules/util/util.cpp
 )

@@ -25,7 +25,7 @@ namespace SfM::calibrate {
 
             std::vector<cv::Point2f> corners;
 
-            std::cout << "Finding chessboard corners\n";
+            std::cout << "Finding chessboard corners, image size: " << image.rows << ", " << image.cols << "\n";
             bool found = cv::findChessboardCorners(image, boardSize, corners, cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_NORMALIZE_IMAGE);
             std::cout << "Found: " << found << std::endl;
             if(!found)

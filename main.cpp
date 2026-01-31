@@ -1,4 +1,6 @@
 #include <iostream>
+#include "submodules/SfM.hpp"
+#include "submodules/scene.hpp"
 #include "submodules/calibrate/calibrate.hpp"
 #include "submodules/detect/detect.hpp"
 #include "submodules/io/file.hpp"
@@ -13,21 +15,117 @@
 #include <chrono>
 #include <numeric>
 
+// #define CALIBRATION
+
 int main()
 {
-    // Testing
-    auto images = SfM::io::loadImages("../calibration_data/test_dir");
+#ifdef CALIBRATION
+    std::string pathToImages = "../../Data/S21/calibration_small/";
+    auto images = SfM::io::loadImages(pathToImages);
     std::cout << "image count: " << images.size() << std::endl;
 
     SfM::io::storeCalibration("../calibration_data/test_dir/calib.json", SfM::calibrate::calibrateCamera(images, {10, 7}));
 
-    auto calibration = SfM::io::loadCalibration("../calibration_data/test_dir/calib.json");
+    auto calibration = SfM::io::loadCalibration("../../Data/S21/calibration.json");
 
-    // SfM::io::storeCalibration("../calibration_data/test_dir/calib.json", calibration);
+    std::cout << "Camera Matrix:\n"
+              << calibration.matrix << std::endl;
+    std::cout << "Distortion Coefficients:\n"
+              << calibration.distortionCoeffs << std::endl;
+#else
+    /* SfM::REAL width_px = 1920.;
+    SfM::REAL height_px = 1080.;
+    SfM::REAL f_mm = 50.;
+    SfM::REAL sensor_mm = 36.f;
 
-    std::cout << "Camera Matrix:\n" << calibration.matrix << std::endl;
-    std::cout << "Distortion Coefficients:\n" << calibration.distortionCoeffs << std::endl;
+    SfM::REAL fx = f_mm * width_px / sensor_mm; // focal length in pixel
+    SfM::REAL fy = fx;
+    SfM::REAL cx = width_px / 2.0f;  // 960
+    SfM::REAL cy = height_px / 2.0f; // 540
 
+    SfM::Mat3 K;
+    K << fx, 0, cx,
+        0, fy, cy,
+        0, 0, 1; */
+
+    auto calibration = SfM::io::loadCalibration("../../Data/S21/calibration.json");
+    SfM::Mat3 K = calibration.K;
+
+    std::cout << K << std::endl;
+
+    SfM::Mat4 startTransform = SfM::util::cvCameraToBlender(SfM::util::calculateTransformationMatrixDeg(90, 0, 0, SfM::Vec3(0, 0, 0)));
+    // SfM::Mat4 startTransform = SfM::Mat4::Identity();
+
+    SfM::match::MATCHING_OPTIONS matchingOptions{
+        .threshold = 0.95,
+        .maxDistancePxSquared = 100 * 100,
+    };
+    SfM::solve::RANSAC_OPTIONS ransacOptions{
+        .maxIter = 2048 * 4,
+        .maxTimeMs = 20000,
+        .maxSquaredError = 1,
+        .successProb = 0.999,
+    };
+    SfM::solve::BUNDLE_ADJUSTMENT_OPTIONS baOptions{
+        .ceresOptions = {
+            .trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT, // LEVENBERG_MARQUARDT (better?) is the default, other is DOGLEG
+            .max_num_iterations = 512,
+            .max_solver_time_in_seconds = 100,
+            .num_threads = static_cast<int>(std::thread::hardware_concurrency()),
+            .max_num_consecutive_invalid_steps = 10,
+            // .linear_solver_type = ceres::DENSE_SCHUR, // (DENSE_SCHUR and SPARSE_SCHUR best for BA) http://ceres-solver.org/nnls_solving.html#linear-solvers
+            .linear_solver_type = ceres::SPARSE_SCHUR,
+            .minimizer_progress_to_stdout = true,
+        },
+        .printSummary = true,
+    };
+    SfM::SCENE_OPTIONS sceneOptions{
+        .matchingOptions = matchingOptions,
+        .ransacOptions = ransacOptions,
+        .bundleAdjustmentOptions = baOptions,
+        .useEightPoint = true,
+        .splitTracks = false,
+        .useRANSAC = true,
+        .verbose = true,
+    };
+
+    SfM::Scene scene(K, startTransform, sceneOptions);
+
+    std::string pathToImages = "../../Data/S21/tisch_small/";
+
+    auto images = SfM::io::loadImages(pathToImages);
+
+    for (auto &img : images)
+    {
+        img = SfM::calibrate::undistort(img, calibration);
+    }
+
+    std::cout << "loaded " << images.size() << " images." << std::endl;
+    for (int i = 0; i < images.size(); i++)
+    {
+        auto keypoints = SfM::detect::SIFTOpenCv(images[i]);
+        std::cout << "Detected: " << keypoints.size() << " keypoints." << std::endl;
+
+        scene.pushBackImageWithKeypoints(std::move(images[i]), std::move(keypoints));
+    }
+
+    scene.optimizeExtrinsicsAnd3dPoints();
+
+    SfM::io::exportSceneForBlender(scene, "../../Data/S21/tisch_small.json", "./tisch_small");
+#endif
+    return 0;
+    /*  // Testing
+     auto images = SfM::io::loadImages("../calibration_data/test_dir");
+     std::cout << "image count: " << images.size() << std::endl;
+
+     SfM::io::storeCalibration("../calibration_data/test_dir/calib.json", SfM::calibrate::calibrateCamera(images));
+
+     auto calibration = SfM::io::loadCalibration("../calibration_data/test_dir/calib.json");
+
+     // SfM::io::storeCalibration("../calibration_data/test_dir/calib.json", calibration);
+
+     std::cout << "Camera Matrix:\n" << calibration.matrix << std::endl;
+     std::cout << "Distortion Coefficients:\n" << calibration.distortionCoeffs << std::endl; */
 
     // std::string path = "../../Data/real_image.jpg";
     std::string path = "../../Data/calibration.jpg";
@@ -44,7 +142,7 @@ int main()
 
     blurred = SfM::util::mulScalar(blurred, static_cast<float>(255));
 
-    auto cv = SfM::io::imageToCvMat(blurred);
+    auto cv = SfM::util::imageToCvMat(blurred);
     cv::imwrite("../../Data/______blurred.png", cv);
 
     return 0;

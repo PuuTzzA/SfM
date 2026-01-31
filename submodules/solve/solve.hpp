@@ -1,6 +1,10 @@
 #pragma once
 #include "../SfM.hpp"
 #include <functional>
+#include <ceres/ceres.h>
+#include <ceres/rotation.h>
+#include <ceres/loss_function.h>
+#include <thread>
 
 namespace SfM::solve
 {
@@ -16,7 +20,7 @@ namespace SfM::solve
      */
     SfMResult eightPointAlgorithm(std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const Mat4 startTransform = Mat4::Identity());
 
-    /**
+    /* /**
      * REMOVED, because I din't want to maintain two separate Instances of the same logic
      * @brief Solves for the camera extrinsics and 3d positions of the keypoints with the 8 point algorithm.
      *
@@ -27,7 +31,25 @@ namespace SfM::solve
      *
      * @return Camera extrinsics and 3d locations of the 3d points
      */
-    // SfMResult eightPointAlgorithm(std::vector<Track> &tracks, const Mat3 K, const int numFrames, const Mat4 startTransform = Mat4::Identity());
+    // SfMResult eightPointAlgorithm(std::vector<Track> &tracks, const Mat3 K, const int numFrames, const Mat4 startTransform = Mat4::Identity()); */
+
+    /**
+     * @brief Options for the bundle adjustment step
+     * @param ceresOptions Options for the ceres optimizer used in BA
+     * @param printSummary Bool to controll if the optimizer summary should be printed
+     */
+    struct BUNDLE_ADJUSTMENT_OPTIONS
+    {
+        ceres::Solver::Options ceresOptions = {
+            .trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT, // LEVENBERG_MARQUARDT (better?) is the default, other is DOGLEG
+            .max_num_iterations = 256,
+            .num_threads = static_cast<int>(std::thread::hardware_concurrency()),
+            .max_num_consecutive_invalid_steps = 10,
+            .linear_solver_type = ceres::DENSE_SCHUR,                 // (DENSE_SCHUR and SPARSE_SCHUR best for BA) http://ceres-solver.org/nnls_solving.html#linear-solvers
+            .minimizer_progress_to_stdout = true,
+        };
+        bool printSummary = true;
+    };
 
     /**
      * @brief Solves for the camera extrinsics and 3d positions of the keypoints using non-linear optimization (bundle adjustment).
@@ -41,7 +63,7 @@ namespace SfM::solve
      *
      * @return Camera extrinsics and 3d locations of the 3d points
      */
-    SfMResult bundleAdjustment(const std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const SfMResult *initialGuess, const Mat4 startTransform = Mat4::Identity());
+    SfMResult bundleAdjustment(const std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const BUNDLE_ADJUSTMENT_OPTIONS& options, const SfMResult *initialGuess, const Mat4 startTransform = Mat4::Identity());
 
     /**
      * @brief Calculates the view matrix and 3d positions between two frames
@@ -53,6 +75,22 @@ namespace SfM::solve
      */
     EightPointResult eightPointAlgorithmFromSubset(const std::vector<Vec2> &calcPoints1, const std::vector<Vec2> &calcPoints2,
                                                    const std::vector<Vec2> &allPoints1, const std::vector<Vec2> &allPoints2);
+
+    /**
+     * @brief Calculates the reprojection error of a 3d point given the NORMALIZED observation, viewMatrix and the intrinsics
+     * @return Squared distance
+     */
+    inline REAL reprojectionError(const Mat3 &K, const Vec2 observation, const Vec3 point3d, const Mat4 &viewMatrix)
+    {
+        Vec3 p = K * (viewMatrix * point3d.homogeneous()).head<3>();
+        p[0] /= p[2];
+        p[1] /= p[2];
+        Vec3 obs(observation[0], observation[1], 1.);
+        obs = K * obs; // multiply by K because the observations are normalized, don't divie by z, bc z == 1.
+        REAL dx = p[0] - obs[0];
+        REAL dy = p[1] - obs[1];
+        return dx * dx + dy * dy;
+    }
 
     /**
      * @brief Options for random sample consensus to find in- and outliers
@@ -70,13 +108,18 @@ namespace SfM::solve
         using fittingFunction = std::function<EightPointResult(const std::vector<Vec2> &, const std::vector<Vec2> &, const std::vector<Vec2> &, const std::vector<Vec2> &)>; // calcPoints1, calcPoints2, allPoints1, allPoints2
         using lossFunction = std::function<REAL(const Mat3 &, const Vec2, const Vec2, const Vec3, const Mat4 &)>;                                                            // Intrinsics, Observation1, Observation2, 3dPoint, View Matrix
 
-        int minN;
-        int maxIter;
-        int maxTimeMs;
-        REAL maxSquaredError;
+        int minN = 8;
+        int maxIter = 512;
+        int maxTimeMs = 1000;
+        REAL maxSquaredError = 10;
         REAL successProb = static_cast<REAL>(0.99);
-        fittingFunction model;
-        lossFunction loss;
+        fittingFunction model = eightPointAlgorithmFromSubset;
+        lossFunction loss = [](const Mat3 &K, const Vec2 obs1, const Vec2 obs2, const Vec3 point3d, const Mat4 &viewMat)
+        {
+            REAL loss1 = reprojectionError(K, obs1, point3d, Mat4::Identity()); // is always ~0 since points are created with obs1 * lamba
+            REAL loss2 = reprojectionError(K, obs2, point3d, viewMat);
+            return std::max(loss1, loss2);
+        };
     };
 
     /**
@@ -87,73 +130,9 @@ namespace SfM::solve
      * @param K Intrinsics matrix
      * @param options Options for the algorithm
      *
-     * @return Vector of inliers
+     * @return Vector of indices of inliers
      */
-    std::vector<int> RANSAC(const std::vector<Vec2> &x, const std::vector<Vec2> &y, const Mat3 &K, const RANSAC_OPTIONS &options);
-
-    /**
-     * @brief Represents a scene with a vector of extrinsics and 3d points.
-     * New frames can be added to the scene with the addFrame method, which calculates
-     * the new pose and 3d points with the eight point algorithm.
-     */
-    class Scene
-    {
-    public:
-        Scene() = default;
-        Scene(const Mat3 K, const Mat4 startTransform, bool useRANSAC, RANSAC_OPTIONS RANSAC_options);
-        void setK(const Mat3 K);
-        void setStartTransform(const Mat4 startTransform);
-        void setUseRANSAC(bool useRANSAC);
-        void setRANSACOptions(RANSAC_OPTIONS RANSAC_options);
-
-        void initializeFromFirstFrame(Frame &&frame, const int numTotTracks);
-        void addFrame(Frame &&frame, const int newNumTotTracks);
-
-        std::vector<Mat4> getExtrinsics();
-        std::vector<Vec3> get3dPoints();
-
-    private:
-        Vec2 normalizePoints(Vec2 pixel);
-
-        Mat3 m_K = Mat3::Identity();
-        Mat3 m_K_inv = Mat3::Identity();
-        std::vector<Frame> m_frames;
-        std::vector<Mat4> m_extrinsics;
-        std::vector<Vec3> m_points3d;
-        bool m_useRANSAC = false;
-        RANSAC_OPTIONS m_RANSAC_options = {};
-
-        // Values that are needed from the old frame to match the new one
-        std::vector<Vec2> m_shared12points1;
-        std::vector<Vec2> m_shared12points2;
-
-        std::vector<Vec2> m_shared23points2;
-        std::vector<Vec2> m_shared23points3;
-
-        std::vector<int> m_trackIndices12;
-        std::vector<int> m_trackIndices23;
-
-        REAL m_accumulatedScale = static_cast<REAL>(1.);
-        Mat4 m_accumulatedPose = Mat4::Identity();
-        EightPointResult m_frame12 = {};
-        EightPointResult m_frame23 = {};
-    };
-
-    /**
-     * @brief Calculates the reprojection error of a 3d point given the NORMALIZED observation, viewMatrix and the intrinsics
-     * @return Squared distance
-     */
-    inline REAL reprojectionError(const Mat3 &K, const Vec2 observation, const Vec3 point3d, const Mat4 &viewMatrix)
-    {
-        Vec3 p = K * (viewMatrix * point3d.homogeneous()).head<3>();
-        p[0] /= p[2];
-        p[1] /= p[2];
-        Vec3 obs(observation[0], observation[1], 1.);
-        obs = K * obs; // multiply by K because the observations are normalized, don't divie by z, bc z == 1.
-        REAL dx = p[0] - obs[0];
-        REAL dy = p[1] - obs[1];
-        return dx * dx + dy * dy;
-    }
+    std::vector<int> RANSAC(const std::vector<Vec2> &x, const std::vector<Vec2> &y, const Mat3 &K, const RANSAC_OPTIONS &options, const bool verbose);
 
     /**
      * @brief Computes the thing that gets minimized in the 8 point algorithm. Namely: x2^T * E * x1 = 0

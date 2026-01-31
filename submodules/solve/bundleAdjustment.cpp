@@ -2,10 +2,6 @@
 #include "../util/util.hpp"
 #include <Eigen/SVD>
 #include <iostream>
-#include <ceres/ceres.h>
-#include <ceres/rotation.h>
-#include <ceres/loss_function.h>
-#include <thread>
 #include <algorithm>
 
 namespace SfM::solve
@@ -36,7 +32,7 @@ namespace SfM::solve
 
             if (ceres::abs(p[2]) < T(EPSILON))
             {
-                std::cout << "dangerous division in operator()" << std::endl;
+                // std::cout << "dangerous division in operator()" << std::endl;
                 p[2] = T(EPSILON);
             }
 
@@ -70,10 +66,11 @@ namespace SfM::solve
         extrinsics[2] = aa_vec[2];
     }
 
-    SfMResult bundleAdjustment(const std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const SfMResult *initialGuess, const Mat4 startTransform)
+    SfMResult bundleAdjustment(const std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const BUNDLE_ADJUSTMENT_OPTIONS &options, const SfMResult *initialGuess, const Mat4 startTransform)
     {
         std::vector<Vec3> points3d;
         std::vector<REAL> extrinsics(frames.size() * 6); // 3 * angle-axis, 3 * translation
+        const Vec3 DEFAULT_POINT_POS = Vec3(0, 0, 10);
 
         if (initialGuess)
         {
@@ -87,7 +84,14 @@ namespace SfM::solve
         points3d.resize(numTotTracks);
         for (int i = 0; i < numTotTracks; i++)
         {
-            points3d[i] = initialGuess ? initialGuess->points[i] : Vec3(0, 0, 10);
+            if (initialGuess)
+            {
+                points3d[i] = initialGuess->points[i] != Vec3::Zero() ? initialGuess->points[i] : DEFAULT_POINT_POS;
+            }
+            else
+            {
+                points3d[i] = DEFAULT_POINT_POS;
+            }
         }
 
         for (int i = 0; i < frames.size(); i++)
@@ -120,8 +124,12 @@ namespace SfM::solve
 
             for (const auto &point : frames[i].observations)
             {
-                REAL *pointPtr = points3d[point.trackId].data();
-                ceres::CostFunction *costFunction = BundleAdjustmentConstraint::create(K, point.point, 1.0);
+                if (!point->inlier)
+                {
+                    continue;
+                }
+                REAL *pointPtr = points3d[point->trackId].data();
+                ceres::CostFunction *costFunction = BundleAdjustmentConstraint::create(K, point->point, 1.0);
                 // problem.AddResidualBlock(costFunction, new ceres::TukeyLoss(1.0), extrinsicPtr, pointPtr); // http://ceres-solver.org/nnls_modeling.html#instances
                 problem.AddResidualBlock(costFunction, new ceres::CauchyLoss(0.5), extrinsicPtr, pointPtr); // very good at outlier detection (but as the normal BA, kinda volatile to changes in the initialization)
                 // problem.AddResidualBlock(costFunction, nullptr, extrinsicPtr, pointPtr);
@@ -134,19 +142,14 @@ namespace SfM::solve
         problem.SetParameterBlockConstant(first_cam);
 
         // Solve Problem
-        ceres::Solver::Options options;
-        options.linear_solver_type = ceres::DENSE_SCHUR;                 // (DENSE_SCHUR and SPARSE_SCHUR best for BA) http://ceres-solver.org/nnls_solving.html#linear-solvers
-        options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT; // LEVENBERG_MARQUARDT (better?) is the default, other is DOGLEG
-        options.max_num_consecutive_invalid_steps = 10;
-        options.max_num_iterations = 256;
-        options.num_threads = std::thread::hardware_concurrency();
-        options.minimizer_progress_to_stdout = true;
-
         ceres::Solver::Summary summary;
-        ceres::Solve(options, &problem, &summary);
+        ceres::Solve(options.ceresOptions, &problem, &summary);
 
-        std::cout << "Running Bundle Adjustment on " << std::thread::hardware_concurrency() << " threads." << std::endl;
-        std::cout << summary.FullReport() << "\n";
+        if (options.printSummary)
+        {
+            std::cout << "BUNDLE ADJUSTMENT: Ran Bundle Adjustment on " << std::thread::hardware_concurrency() << " threads." << std::endl;
+            std::cout << summary.FullReport() << "\n";
+        }
 
         // Extract Results
         SfMResult result;
@@ -188,7 +191,12 @@ namespace SfM::solve
         result.points = std::move(points3d);
         for (auto &p : result.points)
         {
-            p = (startTransform * scale * p.homogeneous()).head<3>();
+            Vec3 pointInWorldSpace = (startTransform * scale * p.homogeneous()).head<3>();
+            if (p != DEFAULT_POINT_POS)
+            {
+                result.pointsFiltered.push_back(pointInWorldSpace);
+            }
+            p = pointInWorldSpace;
         }
 
         return result;

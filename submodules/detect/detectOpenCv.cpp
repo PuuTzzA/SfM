@@ -123,15 +123,16 @@ namespace SfM::detect
         return eigenCorners;
     }
 
-    void siftCv(cv::Mat &image)
+    std::vector<Keypoint> SIFTOpenCv(cv::Mat &image)
     {
+        static int c = 0;
         // 1. Create the SIFT detector object
         // SIFT::create() returns a smart pointer (cv::Ptr<cv::SIFT>)
         cv::Ptr<cv::SIFT> sift = cv::SIFT::create();
 
         // 2. Define containers for the results
-        std::vector<cv::KeyPoint> keypoints; // List of (x,y), size, angle, response
-        cv::Mat descriptors;                 // A matrix where each row is a descriptor
+        std::vector<cv::KeyPoint> keypointsCv; // List of (x,y), size, angle, response
+        cv::Mat descriptorsCv;                 // A matrix where each row is a descriptor
 
         // 3. Detect and Compute
         // Arguments:
@@ -139,14 +140,45 @@ namespace SfM::detect
         //   2. Mask (use cv::noArray() or cv::Mat() for "None")
         //   3. Output Keypoints
         //   4. Output Descriptors
-        sift->detectAndCompute(image, cv::noArray(), keypoints, descriptors);
+        sift->detectAndCompute(image, cv::noArray(), keypointsCv, descriptorsCv);
+
+        // Convert into std::vector<Keypoint>
+        std::vector<Keypoint> resKeypoints;
+
+        resKeypoints.reserve(keypointsCv.size());
+
+        for (size_t i = 0; i < keypointsCv.size(); ++i)
+        {
+            Keypoint k;
+            const auto &cv_k = keypointsCv[i];
+
+            k.point = Vec2(cv_k.pt.x, cv_k.pt.y);
+            k.size = static_cast<REAL>(cv_k.size);
+            k.angle = static_cast<REAL>(cv_k.angle * (M_PI / 180.0)); // 3. Angle: Convert Degrees (OpenCV) to Radians (Your Struct)
+            k.response = static_cast<REAL>(cv_k.response);
+            k.octave = cv_k.octave;
+
+            // Check if descriptors were actually computed (detectAndCompute can sometimes return keypoints with empty descriptors if the image is blank)
+            if (!descriptorsCv.empty())
+            {
+                // SIFT descriptors are floats (CV_32F).
+                // Get a pointer to the start of the i-th row.
+                const float *d_ptr = descriptorsCv.ptr<float>(static_cast<int>(i));
+
+                // Initialize vector with the 128 float values from that row
+                k.descriptor.assign(d_ptr, d_ptr + descriptorsCv.cols);
+            }
+
+            resKeypoints.push_back(k);
+        }
 
         // --- Optional: Visualization to verify it worked ---
-        cv::Mat output_img;
-        cv::drawKeypoints(image, keypoints, output_img, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-        //cv::imshow("SIFT Keypoints", output_img);
-        cv::imwrite("../../Data/SIFT Keypoints OpenCv.png", output_img);
-        cv::waitKey(0);
+        // cv::Mat output_img;
+        // cv::drawKeypoints(image, keypointsCv, output_img, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        // cv::imshow("SIFT Keypoints", output_img);
+        // cv::imwrite(("../../Data/siftImg_" + std::to_string(c++) + ".png"), output_img);
+
+        return resKeypoints;
     }
 
 } // Namespace SfM::detect

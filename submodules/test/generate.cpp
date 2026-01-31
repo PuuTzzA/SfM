@@ -119,11 +119,11 @@ namespace SfM::test
                 {
                     // std::cout << "observation at: " << observation.point[0] << ", " << observation.point[1] << std::endl;
                     // std::cout << "GENERATE: error " << testReprojectionError(cameraIntrinsics, observation.point, points3d[j], worldToCv) << std::endl;
-                    currentFrame.observations.push_back(observation);
+                    currentFrame.observations.push_back(std::make_unique<Observation>(observation));
                 }
             }
 
-            frames.emplace_back(currentFrame);
+            frames.push_back(std::move(currentFrame));
         }
 
         return frames;
@@ -151,7 +151,7 @@ namespace SfM::test
                 observation.trackId = outliersStartIndex + i;
                 observation.point = Vec2(u, v);
 
-                frame.observations.push_back(observation);
+                frame.observations.push_back(std::make_unique<Observation>(observation));
             }
         }
 
