@@ -17,7 +17,7 @@ namespace SfM::calibrate {
      * @param images The images containing the chessboard pattern from different angles.
      * @return CameraCalibration which contains the calibration parameters.
      */
-    CameraCalibration calibrateCamera(const std::vector<cv::Mat>& images);
+    CameraCalibration calibrateCamera(const std::vector<cv::Mat>& images, cv::Size boardSize = {7, 6});
 
     /**
      * @brief Undistorts a given image.

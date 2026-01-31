@@ -2,9 +2,8 @@
 
 namespace SfM::calibrate {
 
-    CameraCalibration calibrateCamera(const std::vector<cv::Mat>& images) {
+    CameraCalibration calibrateCamera(const std::vector<cv::Mat>& images, cv::Size boardSize) {
 
-        cv::Size boardSize{10, 7};
         float squareSize = 1.0f;
 
         std::cout << "Setting object points\n";
