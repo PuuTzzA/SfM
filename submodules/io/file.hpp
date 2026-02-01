@@ -1,5 +1,6 @@
 #pragma once
 #include "../SfM.hpp"
+#include "../scene.hpp"
 #include "../calibrate/calibrate.hpp"
 
 #include <string>
@@ -37,7 +38,7 @@ namespace SfM::io
      * @param dir Path to the directory containing the images.
      * @return An std::vector of all the loaded images.
      */
-    std::vector<cv::Mat> loadImages(const std::string& dir);
+    std::vector<cv::Mat> loadImages(const std::string& dir, std::vector<double>* timestamps = nullptr, uint32_t limit = 0);
 
     /**
      * @brief Stores a camera calibration in a file.
@@ -54,5 +55,14 @@ namespace SfM::io
      * @return The camera calibration stored in the file.
      */
     SfM::calibrate::CameraCalibration loadCalibration(const std::string& path);
+
+    /**
+     * @brief Exports the track in a format that allows for evaluation.
+     *
+     * @param scene The scene containing the track.
+     * @param timestamps The timestamps of each camera pose in the track.
+     * @param path The path of the file.
+     */
+    void exportTrack(std::vector<Mat4>& extrinsics, const std::vector<double>& timestamps, const std::string& path);
 
 } // namespace SfM::io

@@ -48,7 +48,7 @@ int main()
         0, fy, cy,
         0, 0, 1; */
 
-    auto calibration = SfM::io::loadCalibration("../../Data/S21/calibration.json");
+    auto calibration = SfM::io::loadCalibration("../calibration_data/fr1_calib.json");
     SfM::Mat3 K = calibration.K;
 
     std::cout << K << std::endl;
@@ -91,9 +91,11 @@ int main()
 
     SfM::Scene scene(K, startTransform, sceneOptions);
 
-    std::string pathToImages = "../../Data/S21/tisch_small/";
+    std::string pathToImages = "../../Data/rgbd_dataset_freiburg1_xyz/rgb";
 
-    auto images = SfM::io::loadImages(pathToImages);
+    std::vector<double> timestamps{};
+
+    auto images = SfM::io::loadImages(pathToImages, &timestamps, 20);
 
     for (auto &img : images)
     {
@@ -111,7 +113,8 @@ int main()
 
     scene.optimizeExtrinsicsAnd3dPoints();
 
-    SfM::io::exportSceneForBlender(scene, "../../Data/S21/tisch_small.json", "./tisch_small");
+    SfM::io::exportSceneForBlender(scene, "../../Data/fr1_xyz.json", "./fr1_xyz");
+    SfM::io::exportTrack(scene.getExtrinsics(), timestamps, "../../Data/fr1_track.txt");
 #endif
     return 0;
     /*  // Testing

@@ -9,7 +9,7 @@
 
 namespace SfM::io
 {
-    std::string getExtension(const std::string &path)
+    std::string getExtension(const std::string& path)
     {
         size_t dotPos = path.rfind('.');
         if (dotPos == std::string::npos)
@@ -19,7 +19,7 @@ namespace SfM::io
         return ext;
     }
 
-    Image<uchar> loadJpg(const std::string &path, int flags)
+    Image<uchar> loadJpg(const std::string& path, int flags)
     {
         std::ifstream file(path, std::ios::binary | std::ios::ate);
         if (!file)
@@ -29,8 +29,8 @@ namespace SfM::io
         }
         std::streamsize size = file.tellg();
         file.seekg(0, std::ios::beg);
-        uchar *jpegBuffer = new uchar[size];
-        if (!file.read((char *)jpegBuffer, size))
+        uchar* jpegBuffer = new uchar[size];
+        if (!file.read((char*)jpegBuffer, size))
         {
             return Image<uchar>(0, 0);
         }
@@ -52,7 +52,7 @@ namespace SfM::io
         // Decompress directly to vector
         // TJPF_RGB ensures standard RGB byte order
         if (tjDecompress2(decompressor, jpegBuffer, size, retImg.data, width,
-                          0, height, TJPF_RGB, flags) < 0)
+            0, height, TJPF_RGB, flags) < 0)
         {
             tjDestroy(decompressor);
             return Image<uchar>(0, 0);
@@ -63,7 +63,7 @@ namespace SfM::io
         return retImg;
     }
 
-    Image<uchar> loadImage(const std::string &path, int turboJpegFlags)
+    Image<uchar> loadImage(const std::string& path, int turboJpegFlags)
     {
         std::string ext = getExtension(path);
         if (ext == "jpg" || ext == "jpeg") // INFO: turbojpeg is consistantly 30-60ms faster than OpenCv (1920x1080)
@@ -103,7 +103,7 @@ namespace SfM::io
         }
     }
 
-    std::vector<std::vector<Vec2>> loadTrackedPoints(const std::string &path)
+    std::vector<std::vector<Vec2>> loadTrackedPoints(const std::string& path)
     {
         std::ifstream file(path);
         if (!file.is_open())
@@ -127,18 +127,20 @@ namespace SfM::io
         return result;
     }
 
-    std::vector<cv::Mat> loadImages(const std::string &dir)
+    std::vector<cv::Mat> loadImages(const std::string& dir, std::vector<double>* timestamps, uint32_t limit)
     {
         std::vector<cv::Mat> images{};
+        if (timestamps)
+            *timestamps = std::vector<double>{};
 
-        std::filesystem::path dir_path{dir};
+        std::filesystem::path dir_path{ dir };
 
-        auto validExtension = [](const std::string &ext)
-        {
-            return ext == ".png" || ext == ".jpeg" || ext == ".jpg";
-        };
+        auto validExtension = [](const std::string& ext)
+            {
+                return ext == ".png" || ext == ".jpeg" || ext == ".jpg";
+            };
 
-        for (const auto &dir_entry : std::filesystem::directory_iterator{dir_path})
+        for (const auto& dir_entry : std::filesystem::directory_iterator{ dir_path })
         {
             auto entry_path = dir_entry.path();
 
@@ -155,12 +157,24 @@ namespace SfM::io
             }
 
             images.push_back(image);
+            if (timestamps) {
+                try {
+                    timestamps->push_back(std::stod(entry_path.stem().string()));
+                }
+                catch (std::exception e) {
+                    timestamps->push_back(NAN);
+                }
+            }
+
+            if (images.size() == limit) {
+                break;
+            }
         }
 
         return images;
     }
 
-    void storeCalibration(const std::string &path, const SfM::calibrate::CameraCalibration &calibration)
+    void storeCalibration(const std::string& path, const SfM::calibrate::CameraCalibration& calibration)
     {
         using namespace nlohmann;
 
@@ -200,7 +214,7 @@ namespace SfM::io
         file.close();
     }
 
-    SfM::calibrate::CameraCalibration loadCalibration(const std::string &path)
+    SfM::calibrate::CameraCalibration loadCalibration(const std::string& path)
     {
         using namespace nlohmann;
 
@@ -214,8 +228,8 @@ namespace SfM::io
 
         json data = json::parse(file);
 
-        const json &matrix = data["matrix"];
-        const json &distCoeffs = data["distortion"];
+        const json& matrix = data["matrix"];
+        const json& distCoeffs = data["distortion"];
 
         cv::Matx33d cvMatrix{};
         cv::Vec<double, 5> cvDistCoeffs{};
@@ -235,6 +249,27 @@ namespace SfM::io
             }
         }
 
-        return calibrate::CameraCalibration{K, cv::Mat{cvMatrix}, cv::Mat{cvDistCoeffs}};
+        return calibrate::CameraCalibration{ K, cv::Mat{cvMatrix}, cv::Mat{cvDistCoeffs} };
+    }
+
+    void exportTrack(std::vector<Mat4>& extrinsics, const std::vector<double>& timestamps, const std::string& path) {
+        std::ofstream file(path);
+
+        if (!file) {
+            std::cerr << "Could not open file '" << path << "'\n";
+        }
+
+        for (uint32_t i = 0; i < extrinsics.size(); i++) {
+            auto timestamp = timestamps[i];
+            auto pose = extrinsics[i];
+
+            Vec3 t = pose.block<3, 1>(0, 3);
+            Mat3 rotationMat = pose.block<3, 3>(0, 0);
+            Eigen::Quaternion<REAL> q{ rotationMat };
+
+            file << std::fixed << std::setprecision(4) << timestamp << " " << t.x() << " " << t.y() << " " << t.z() << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << std::endl;
+        }
+
+        file.close();
     }
 } // Namespace SfM::io
