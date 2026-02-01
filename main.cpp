@@ -24,7 +24,7 @@ int main()
     auto images = SfM::io::loadImages(pathToImages);
     std::cout << "image count: " << images.size() << std::endl;
 
-    SfM::io::storeCalibration("../calibration_data/test_dir/calib.json", SfM::calibrate::calibrateCamera(images, {10, 7}));
+    SfM::io::storeCalibration("../../Data/S21/calibration.json", SfM::calibrate::calibrateCamera(images, {10, 7}));
 
     auto calibration = SfM::io::loadCalibration("../../Data/S21/calibration.json");
 

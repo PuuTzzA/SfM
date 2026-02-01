@@ -1,5 +1,5 @@
 build/
 blender/
-calibration_data/
+calibration_data/test_dir/
 .vscode/
 *.blend1
