@@ -95,7 +95,7 @@ int main()
 
     std::vector<double> timestamps{};
 
-    auto images = SfM::io::loadImages(pathToImages, &timestamps, 20);
+    auto images = SfM::io::loadImages(pathToImages, &timestamps, 40);
 
     for (auto &img : images)
     {
@@ -114,7 +114,7 @@ int main()
     scene.optimizeExtrinsicsAnd3dPoints();
 
     SfM::io::exportSceneForBlender(scene, "../../Data/fr1_xyz.json", "./fr1_xyz");
-    SfM::io::exportTrack(scene.getExtrinsics(), timestamps, "../../Data/fr1_track.txt");
+    SfM::io::exportTrack(scene.getExtrinsics(), timestamps, "../../Data/fr1_track.txt", "../../Data/rgbd_dataset_freiburg1_xyz/groundtruth.txt");
 #endif
     return 0;
     /*  // Testing

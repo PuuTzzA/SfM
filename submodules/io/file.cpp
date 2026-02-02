@@ -252,7 +252,78 @@ namespace SfM::io
         return calibrate::CameraCalibration{ K, cv::Mat{cvMatrix}, cv::Mat{cvDistCoeffs} };
     }
 
-    void exportTrack(std::vector<Mat4>& extrinsics, const std::vector<double>& timestamps, const std::string& path) {
+    void exportTrack(std::vector<Mat4>& extrinsics, const std::vector<double>& timestamps, const std::string& path, const std::string& ground_truth_path) {
+
+        std::ifstream ground_truth(ground_truth_path);
+
+        double tx, ty, tz, qx, qy, qz, qw;
+
+        std::string line;
+
+        std::string prev_line = "";
+
+        auto find_timestamp = [&](double t) {
+            while (std::getline(ground_truth, line)) {
+                std::istringstream iss(line);
+                double timestamp;
+
+                iss >> timestamp;
+
+                if (timestamp > t) {
+                    std::istringstream prev_iss(prev_line);
+
+                    double prev_timestamp;
+
+                    prev_iss >> prev_timestamp;
+
+                    std::istringstream best_iss;
+
+                    if (abs(timestamp - t) < abs(prev_timestamp - t)) {
+                        best_iss = std::move(iss);
+                    }
+                    else {
+                        best_iss = std::move(prev_iss);
+                    }
+
+                    best_iss >> tx >> ty >> tz >> qx >> qy >> qz >> qw;
+
+                    std::cout << tx << " " << ty << " " << tz << std::endl;
+
+                    break;
+                }
+
+                prev_line = line;
+            }
+            };
+
+        find_timestamp(timestamps[0]);
+
+        Mat4 gMat = Mat4::Identity();
+
+        Eigen::Quaternion<REAL> gq = Eigen::Quaternion{ qw, qx, qy, qz };
+
+        Vec3 gtStart{ tx, ty, tz };
+
+        gMat.block<3, 3>(0, 0) = Mat3(gq);
+        gMat.block<3, 1>(0, 3) = Vec3{ tx, ty, tz };
+
+        
+        ground_truth.clear();
+        ground_truth.seekg(0, std::ios::beg);
+        
+        find_timestamp(timestamps.back());
+        
+        Vec3 gtEnd{ tx, ty, tz };
+        
+        double scale = (gtEnd - gtStart).norm() / (extrinsics.back().block<3, 1>(0, 3) - extrinsics[0].block<3, 1>(0, 3)).norm();
+
+        std::cout << scale << std::endl;
+
+        for(auto& pose : extrinsics) {
+            pose.block<3, 1>(0, 3) *= scale;
+        }
+        
+        Mat4 universal_transform = gMat * extrinsics[0].inverse();
         std::ofstream file(path);
 
         if (!file) {
@@ -261,7 +332,7 @@ namespace SfM::io
 
         for (uint32_t i = 0; i < extrinsics.size(); i++) {
             auto timestamp = timestamps[i];
-            auto pose = extrinsics[i];
+            auto pose = universal_transform * extrinsics[i];
 
             Vec3 t = pose.block<3, 1>(0, 3);
             Mat3 rotationMat = pose.block<3, 3>(0, 0);

@@ -63,6 +63,6 @@ namespace SfM::io
      * @param timestamps The timestamps of each camera pose in the track.
      * @param path The path of the file.
      */
-    void exportTrack(std::vector<Mat4>& extrinsics, const std::vector<double>& timestamps, const std::string& path);
+    void exportTrack(std::vector<Mat4>& extrinsics, const std::vector<double>& timestamps, const std::string& path, const std::string& ground_truth_path);
 
 } // namespace SfM::io
