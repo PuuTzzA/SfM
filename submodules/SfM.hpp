@@ -144,7 +144,7 @@ namespace SfM
     /**
      * @brief An approximation represents one 3d point (over multiple frames)
      * @param point 3d approximation of the point
-     * @param color color of the track
+     * @param color Color of the track
      */
     struct Approximation
     {
@@ -178,13 +178,13 @@ namespace SfM
      * @brief Final recostructed scene with camera extrinsics and reconstructed 3d points
      * @param extrinsics Vector of camera extrinsics
      * @param points Vector of reconstructed points (Point with trackId i is stored in points[i])
-     * @param pointsFiltered Vector of reconstructed points without outlier points
+     * @param inlierMask Vector of bools representing if a point is an inlier or an outlier
      */
     struct SfMResult
     {
         std::vector<Mat4> extrinsics;
         std::vector<Vec3> points;
-        std::vector<Vec3> pointsFiltered;
+        std::vector<bool> inlierMask;
     };
 
     // ------------------------------------------------------------------------------------------------------------

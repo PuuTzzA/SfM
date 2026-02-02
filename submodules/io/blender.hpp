@@ -15,8 +15,7 @@ namespace SfM::io
      * @param height Height of the image in px
      * @param K Intrinsics matrix
      * @param cameraExtrinsics Vector of cameraExtrinsics
-     * @param points Vector of 3d points
-     * @param colors Vector of colors of the points in uchar [r, g, b]
+     * @param points Vector of Approximations (3d point + color)
      * @param path Output path
      * @param pathToImages Path to folder with images, RELATIVE TO PARAM path!
      */
@@ -24,8 +23,7 @@ namespace SfM::io
                                 int height,
                                 Mat3 K,
                                 std::vector<Mat4> &cameraExtrinsics,
-                                std::vector<Vec3> &points,
-                                std::vector<Vec3rgb> &colors,
+                                std::vector<Approximation> &points,
                                 std::string path,
                                 std::string pathToImages = "");
 

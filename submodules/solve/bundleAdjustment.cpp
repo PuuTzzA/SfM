@@ -294,14 +294,12 @@ namespace SfM::solve
         }
 
         result.points = std::move(points3d);
-        for (auto &p : result.points)
+
+        result.inlierMask.resize(result.points.size());
+        for (int i = 0; i < result.inlierMask.size(); i++)
         {
-            Vec3 pointInWorldSpace = (startTransform * scale * p.homogeneous()).head<3>();
-            if (p != DEFAULT_POINT_POS)
-            {
-                result.pointsFiltered.push_back(pointInWorldSpace);
-            }
-            p = pointInWorldSpace;
+            result.points[i] = (startTransform * scale * result.points[i].homogeneous()).head<3>();
+            result.inlierMask[i] = result.points[i] != DEFAULT_POINT_POS;
         }
 
         return result;

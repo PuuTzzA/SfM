@@ -8,8 +8,7 @@ namespace SfM::io
                                 int height,
                                 Mat3 K,
                                 std::vector<Mat4> &cameraExtrinsics,
-                                std::vector<Vec3> &points,
-                                std::vector<Vec3rgb> &colors,
+                                std::vector<Approximation> &points,
                                 std::string path,
                                 std::string pathToImages)
     {
@@ -54,30 +53,26 @@ namespace SfM::io
         jsonFile["extrinsics"] = extrinsicsArray;
 
         json pointArray = json::array();
+        json colArray = json::array();
+
         for (const auto &p : points)
         {
             json point = json::array();
-            Vec3 pWorld = util::blendCvMat3() * p;
+            Vec3 pWorld = util::blendCvMat3() * p.point;
             point.push_back(pWorld[0]);
             point.push_back(pWorld[1]);
             point.push_back(pWorld[2]);
             pointArray.push_back(point);
+
+            auto c = p.color;
+            json col = json::array();
+            col.push_back(c[0]);
+            col.push_back(c[1]);
+            col.push_back(c[2]);
+            colArray.push_back(col);
         }
         jsonFile["points"] = pointArray;
-
-        if (colors.size() == points.size()) // it can be that no color information was provided
-        {
-            json colArray = json::array();
-            for (const auto &c : colors)
-            {
-                json col = json::array();
-                col.push_back(c[0]);
-                col.push_back(c[1]);
-                col.push_back(c[2]);
-                colArray.push_back(col);
-            }
-            jsonFile["colors"] = colArray;
-        }
+        jsonFile["colors"] = colArray;
 
         // Save to file
         std::ofstream out(path, std::ios::trunc); // trunc ensures overwrite
@@ -99,8 +94,7 @@ namespace SfM::io
                                scene.getImages()[0].rows,
                                scene.getK(),
                                scene.getExtrinsics(),
-                               scene.get3dPointsFilterd(),
-                               scene.getColors(),
+                               scene.getApproximationsFilterd(),
                                path,
                                pathToImages);
     }

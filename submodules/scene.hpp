@@ -51,13 +51,12 @@ namespace SfM
         Mat3 getK();
         std::vector<cv::Mat> &getImages();
         std::vector<Mat4> &getExtrinsics();
-        std::vector<Vec3> &get3dPoints();
-        std::vector<Vec3rgb> &getColors();
+        std::vector<Approximation> &getApproximations();
 
         /**
-         * @brief Returns the approximated 3d points, without points that are only seen from one frame (i.e. that have been marked as outliers)
+         * @brief Returns the approximated 3d points, without points that are marked as outliers
          */
-        std::vector<Vec3> &get3dPointsFilterd();
+        std::vector<Approximation> &getApproximationsFilterd();
 
         /**
          * @brief Add a new frame at the end of the scene.
@@ -100,9 +99,8 @@ namespace SfM
         std::vector<std::vector<Keypoint>> m_keypoints;
         std::vector<Frame> m_frames;
         std::vector<Mat4> m_extrinsics;
-        std::vector<Vec3> m_points3d;  // Stores the 3d approximation in a vector with the approximation of a point with trackId i being on position i
-        std::vector<Vec3rgb> m_colors; // Stores the colors of the tracks in
-        std::vector<Vec3> m_points3dFilterd;
+        std::vector<Approximation> m_points3d;  // Stores the 3d approximation in a vector with the approximation of a point with trackId i being on position i
+        std::vector<Approximation> m_points3dFilterd;
         SCENE_OPTIONS m_sceneOptions = {};
 
         // Other helper member variables

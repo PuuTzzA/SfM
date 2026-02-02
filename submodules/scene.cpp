@@ -146,9 +146,14 @@ namespace SfM
         SfMResult optimized;
         if (m_sceneOptions.useEightPoint)
         {
+            std::vector<Vec3> points;
+            for (const auto &p : m_points3d)
+            {
+                points.push_back(p.point);
+            }
             const SfMResult initial{
                 .extrinsics = std::move(m_extrinsics),
-                .points = std::move(m_points3d),
+                .points = std::move(points),
             };
             optimized = solve::bundleAdjustment(m_frames, m_K, m_currentNumTracks, m_sceneOptions.bundleAdjustmentOptions, &initial, Mat4::Identity());
         }
@@ -157,14 +162,22 @@ namespace SfM
             optimized = solve::bundleAdjustment(m_frames, m_K, m_currentNumTracks, m_sceneOptions.bundleAdjustmentOptions, nullptr, m_accumulatedPose);
         }
         m_extrinsics = std::move(optimized.extrinsics);
-        m_points3d = std::move(optimized.points);
-        m_points3dFilterd = std::move(optimized.pointsFiltered);
+
+        m_points3dFilterd.clear();
+        for (int i = 0; i < optimized.points.size(); i++)
+        {
+            m_points3d[i].point = optimized.points[i];
+
+            if (optimized.inlierMask[i])
+            {
+                m_points3dFilterd.push_back(m_points3d[i]);
+            }
+        }
     }
 
     void Scene::initializeEgithPointVariables()
     {
-        m_points3d.resize(m_currentNumTracks, Vec3::Zero());
-        m_colors.resize(m_currentNumTracks, Vec3rgb::Zero());
+        m_points3d.resize(m_currentNumTracks, {.point = Vec3::Zero(), .color = Vec3rgb::Zero()});
         m_point3dCounts.resize(m_currentNumTracks, 0);
         m_extrinsics.push_back(m_accumulatedPose);
     }
@@ -181,8 +194,7 @@ namespace SfM
             std::cerr << "Scene::solveForLastAddedFrame called but the number of frames was not >= 2, was: " << m_frames.size() << "!" << std::endl;
         }
 
-        m_points3d.resize(m_currentNumTracks, Vec3::Zero());
-        m_colors.resize(m_currentNumTracks, Vec3rgb::Zero());
+        m_points3d.resize(m_currentNumTracks, {.point = Vec3::Zero(), .color = Vec3rgb::Zero()});
         m_point3dCounts.resize(m_currentNumTracks, 0);
         int n = m_frames.size() - 1;
 
@@ -366,26 +378,27 @@ namespace SfM
             }
 
             Vec3 newPointGlobal = (m_accumulatedPose * (m_accumulatedScale * m_frame23.points[j]).homogeneous()).head<3>();
-            Vec3rgb newPointColor = util::getPixelBilinearUchar(m_images[n - 1], denormalizePoints(m_shared23points2[j]));
+            Vec3rgb newColor = util::getPixelBilinearUchar(m_images[n - 1], denormalizePoints(m_shared23points2[j]));
 
             if (m_point3dCounts[trackId] == 0)
             {
-                m_points3d[trackId] = newPointGlobal;
-                m_colors[trackId] = newPointColor;
+                m_points3d[trackId].point = newPointGlobal;
+                m_points3d[trackId].color = newColor;
                 m_point3dCounts[trackId] = 1;
             }
             else // Update 3d point using a running average
             {
-                if ((m_points3d[trackId] - newPointGlobal).norm() < 50.0)
+                if ((m_points3d[trackId].point - newPointGlobal).norm() < 50.0)
                 {
                     int N = m_point3dCounts[trackId];
 
-                    Vec3 oldPoint = m_points3d[trackId];
-                    m_points3d[trackId] = oldPoint + (newPointGlobal - oldPoint) / static_cast<REAL>(N + 1);
+                    Vec3 oldPoint = m_points3d[trackId].point;
+                    m_points3d[trackId].point = oldPoint + (newPointGlobal - oldPoint) / static_cast<REAL>(N + 1);
 
-                    Vec3rgb oldColor = m_colors[trackId];
+                    Vec3rgb oldColor = m_points3d[trackId].color;
 
-                    auto accumulateUchar = [N](unsigned char cNew, unsigned char cOld) -> unsigned char {
+                    auto accumulateUchar = [N](unsigned char cNew, unsigned char cOld) -> unsigned char
+                    {
                         float cNewf = static_cast<float>(cNew);
                         float cOldf = static_cast<float>(cOld);
                         float res = cOldf + (cNewf - cOldf) / static_cast<float>(N + 1);
@@ -393,9 +406,9 @@ namespace SfM
                         return static_cast<unsigned char>(res);
                     };
 
-                    m_colors[trackId][0] = accumulateUchar(newPointColor[0], oldColor[0]);
-                    m_colors[trackId][1] = accumulateUchar(newPointColor[1], oldColor[1]);
-                    m_colors[trackId][2] = accumulateUchar(newPointColor[2], oldColor[2]);
+                    m_points3d[trackId].color[0] = accumulateUchar(newColor[0], oldColor[0]);
+                    m_points3d[trackId].color[1] = accumulateUchar(newColor[1], oldColor[1]);
+                    m_points3d[trackId].color[2] = accumulateUchar(newColor[2], oldColor[2]);
 
                     m_point3dCounts[trackId]++;
                 }
@@ -440,31 +453,31 @@ namespace SfM
         return m_extrinsics;
     };
 
-    std::vector<Vec3> &Scene::get3dPoints()
+    std::vector<Approximation> &Scene::getApproximations()
     {
         return m_points3d;
     };
 
-    std::vector<Vec3> &Scene::get3dPointsFilterd()
+    std::vector<Approximation> &Scene::getApproximationsFilterd()
     {
-        if (m_points3dFilterd.size() > 0)
+        std::vector<Approximation> temp = m_points3dFilterd.size() > 0 ? m_points3dFilterd : m_points3d;
+        m_points3dFilterd.clear();
+
+        for (const auto &p : temp)
         {
-            return m_points3dFilterd;
-        }
-        for (const auto &p : m_points3d)
-        {
-            if (p != Vec3::Zero())
+            if (p.point == Vec3::Zero())
             {
-                m_points3dFilterd.push_back(p);
+                continue;
             }
+            if (m_sceneOptions.useEightPoint && p.color == Vec3rgb::Zero())
+            {
+                continue;
+            }
+            m_points3dFilterd.push_back(p);
         }
+
         return m_points3dFilterd;
     };
-
-    std::vector<Vec3rgb> &Scene::getColors()
-    {
-        return m_colors;
-    }
 
     REAL Scene::getMedian(std::vector<REAL> &v)
     {

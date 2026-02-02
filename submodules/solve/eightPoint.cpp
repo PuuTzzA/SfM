@@ -44,7 +44,14 @@ namespace SfM::solve
             scene.addFrameWithoutMatching(std::move(frames[i]), numTotTracks);
         }
 
-        return {scene.getExtrinsics(), scene.get3dPoints()};
+        auto points = scene.getApproximations();
+        std::vector<Vec3> points3d;
+        points3d.reserve(points.size());
+        for (const auto &p : points)
+        {
+            points3d.push_back(p.point);
+        }
+        return {scene.getExtrinsics(), points3d};
     }
 
     EightPointResult eightPointAlgorithm(const std::vector<Vec2> &points1, const std::vector<Vec2> &points2)
