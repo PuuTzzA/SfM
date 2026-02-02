@@ -49,6 +49,8 @@ namespace SfM::solve
             .minimizer_progress_to_stdout = true,
         };
         bool printSummary = true;
+        bool useLiftingScheme = false;
+        REAL lambdaReg = 4.0;
     };
 
     /**

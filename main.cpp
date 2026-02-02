@@ -78,6 +78,7 @@ int main()
             .minimizer_progress_to_stdout = true,
         },
         .printSummary = true,
+        .useLiftingScheme = false,
     };
     SfM::SCENE_OPTIONS sceneOptions{
         .matchingOptions = matchingOptions,
@@ -95,7 +96,7 @@ int main()
 
     std::vector<double> timestamps{};
 
-    auto images = SfM::io::loadImages(pathToImages, &timestamps, 40);
+    auto images = SfM::io::loadImages(pathToImages, &timestamps, 20);
 
     for (auto &img : images)
     {
