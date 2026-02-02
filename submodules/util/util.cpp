@@ -37,6 +37,46 @@ namespace SfM::util
         return res;
     }
 
+    Vec3rgb getPixelBilinearUchar(const cv::Mat &img, Vec2 pos)
+    {
+        REAL u = pos[0];
+        REAL v = pos[1];
+        int x0 = static_cast<int>(std::floor(u));
+        int y0 = static_cast<int>(std::floor(v));
+
+        x0 = std::clamp(x0, 0, img.cols - 2);
+        y0 = std::clamp(y0, 0, img.rows - 2);
+
+        int x1 = x0 + 1;
+        int y1 = y0 + 1;
+
+        REAL dx = u - x0;
+        REAL dy = v - y0;
+        REAL w00 = (1.0 - dx) * (1.0 - dy);
+        REAL w10 = dx * (1.0 - dy);
+        REAL w01 = (1.0 - dx) * dy;
+        REAL w11 = dx * dy;
+
+        cv::Vec3b p00 = img.at<cv::Vec3b>(y0, x0);
+        cv::Vec3b p10 = img.at<cv::Vec3b>(y0, x1);
+        cv::Vec3b p01 = img.at<cv::Vec3b>(y1, x0);
+        cv::Vec3b p11 = img.at<cv::Vec3b>(y1, x1);
+
+        Vec3rgb result;
+        for (int i = 0; i < 3; ++i)
+        {
+            REAL val = w00 * p00[i] + w10 * p10[i] + w01 * p01[i] + w11 * p11[i];
+            result[i] = cv::saturate_cast<uchar>(val);
+        }
+
+        // convert from BGR to RGB
+        uchar temp = result[0];
+        result[0] = result[2];
+        result[2] = temp;
+
+        return result;
+    }
+
     template <>
     cv::Mat imageToCvMat<uchar>(const Image<uchar> &image)
     {

@@ -9,10 +9,10 @@ namespace SfM::solve
     class BundleAdjustmentConstraint
     {
     public:
-        BundleAdjustmentConstraint(const Mat3 K, const Vec2 observation, const REAL weight) : m_K(K), m_observation{ observation }, m_weight{ weight } {};
+        BundleAdjustmentConstraint(const Mat3 K, const Vec2 observation, const REAL weight) : m_K(K), m_observation{observation}, m_weight{weight} {};
 
         template <typename T>
-        bool operator()(const T* const extrinsics, const T* const track, T* residuals) const
+        bool operator()(const T *const extrinsics, const T *const track, T *residuals) const
         {
             // extrinsics[0,1,2] are angle-axis rotation, magnitude = angle, direction = axis.
             // extrinsics[3,4,5] are translation.
@@ -42,11 +42,10 @@ namespace SfM::solve
             residuals[0] = T(m_weight) * (p[0] - T(m_observation[0]));
             residuals[1] = T(m_weight) * (p[1] - T(m_observation[1]));
 
-
             return true;
         }
 
-        static ceres::CostFunction* create(const Mat3& K, const Vec2 observation, const REAL weight)
+        static ceres::CostFunction *create(const Mat3 &K, const Vec2 observation, const REAL weight)
         {
             return new ceres::AutoDiffCostFunction<BundleAdjustmentConstraint, 2, 6, 3>(new BundleAdjustmentConstraint(K, observation, weight));
         }
@@ -57,12 +56,13 @@ namespace SfM::solve
         const REAL m_weight;
     };
 
-    class LiftingBundleAdjustmentConstraint {
+    class LiftingBundleAdjustmentConstraint
+    {
     public:
-        LiftingBundleAdjustmentConstraint(const Mat3 K, const Vec2 observation) : m_K(K), m_observation{ observation } {};
+        LiftingBundleAdjustmentConstraint(const Mat3 K, const Vec2 observation) : m_K(K), m_observation{observation} {};
 
         template <typename T>
-        bool operator()(const T* const extrinsics, const T* const track, const T* const weight, T* residuals) const
+        bool operator()(const T *const extrinsics, const T *const track, const T *const weight, T *residuals) const
         {
             // extrinsics[0,1,2] are angle-axis rotation, magnitude = angle, direction = axis.
             // extrinsics[3,4,5] are translation.
@@ -92,11 +92,10 @@ namespace SfM::solve
             residuals[0] = weight[0] * (p[0] - T(m_observation[0]));
             residuals[1] = weight[0] * (p[1] - T(m_observation[1]));
 
-
             return true;
         }
 
-        static ceres::CostFunction* create(const Mat3& K, const Vec2 observation)
+        static ceres::CostFunction *create(const Mat3 &K, const Vec2 observation)
         {
             return new ceres::AutoDiffCostFunction<LiftingBundleAdjustmentConstraint, 2, 6, 3, 1>(new LiftingBundleAdjustmentConstraint(K, observation));
         }
@@ -106,28 +105,30 @@ namespace SfM::solve
         const Vec2 m_observation;
     };
 
-    class LiftingRegularizationConstraint {
+    class LiftingRegularizationConstraint
+    {
     public:
-        LiftingRegularizationConstraint(REAL lambda_reg) : m_lambda_reg{ lambda_reg } {}
+        LiftingRegularizationConstraint(REAL lambda_reg) : m_lambda_reg{lambda_reg} {}
 
         template <typename T>
-        bool operator()(const T* const weight, T* residual) const
+        bool operator()(const T *const weight, T *residual) const
         {
             // Ceres squares this, resulting in: lambda * (1 - w^2)^2
             residual[0] = T(std::sqrt(m_lambda_reg)) * (T(1.0) - weight[0] * weight[0]);
             return true;
         }
 
-        static ceres::CostFunction* create(REAL lambda)
+        static ceres::CostFunction *create(REAL lambda)
         {
             return new ceres::AutoDiffCostFunction<LiftingRegularizationConstraint, 1, 1>(
                 new LiftingRegularizationConstraint(lambda));
         }
+
     private:
         REAL m_lambda_reg;
     };
 
-    void setRotation(Mat3 R, REAL* extrinsics)
+    void setRotation(Mat3 R, REAL *extrinsics)
     {
         Eigen::AngleAxis<REAL> angleAxis(R);
         Eigen::Matrix<REAL, 3, 1> aa_vec = angleAxis.angle() * angleAxis.axis();
@@ -137,7 +138,7 @@ namespace SfM::solve
         extrinsics[2] = aa_vec[2];
     }
 
-    SfMResult bundleAdjustment(const std::vector<Frame>& frames, const Mat3 K, const int numTotTracks, const BUNDLE_ADJUSTMENT_OPTIONS& options, const SfMResult* initialGuess, const Mat4 startTransform)
+    SfMResult bundleAdjustment(const std::vector<Frame> &frames, const Mat3 K, const int numTotTracks, const BUNDLE_ADJUSTMENT_OPTIONS &options, const SfMResult *initialGuess, const Mat4 startTransform)
     {
         std::vector<Vec3> points3d;
         std::vector<REAL> extrinsics(frames.size() * 6); // 3 * angle-axis, 3 * translation
@@ -187,12 +188,18 @@ namespace SfM::solve
         }
 
         std::vector<REAL> weights;
-        if (options.useLiftingScheme) {
+        if (options.useLiftingScheme)
+        {
             uint32_t weight_count = 0;
-            for (const auto& frame : frames) {
-                for(const auto& obs : frame.observations)
-                    if(obs->inlier)
+            for (const auto &frame : frames)
+            {
+                for (const auto &obs : frame.observations)
+                {
+                    if (obs->inlier)
+                    {
                         weight_count++;
+                    }
+                }
             }
             weights.resize(weight_count, 1.0);
         }
@@ -204,26 +211,29 @@ namespace SfM::solve
 
         for (int i = 0, max = frames.size(); i < max; i++)
         {
-            REAL* extrinsicPtr = &extrinsics[i * 6];
+            REAL *extrinsicPtr = &extrinsics[i * 6];
 
-            for (const auto& point : frames[i].observations)
+            for (const auto &point : frames[i].observations)
             {
                 if (!point->inlier)
                 {
                     continue;
                 }
-                REAL* pointPtr = points3d[point->trackId].data();
+                REAL *pointPtr = points3d[point->trackId].data();
 
-                if(options.useLiftingScheme) {
-                    REAL* weightPtr = &weights[current_weight_idx++];
+                if (options.useLiftingScheme)
+                {
+                    REAL *weightPtr = &weights[current_weight_idx++];
 
                     problem.AddResidualBlock(LiftingBundleAdjustmentConstraint::create(K, point->point), nullptr, extrinsicPtr, pointPtr, weightPtr);
                     problem.AddResidualBlock(LiftingRegularizationConstraint::create(options.lambdaReg), nullptr, weightPtr);
 
                     problem.SetParameterLowerBound(weightPtr, 0, 0.0);
                     problem.SetParameterUpperBound(weightPtr, 0, 1.0);
-                } else {
-                    ceres::CostFunction* costFunction = BundleAdjustmentConstraint::create(K, point->point, 1.0);
+                }
+                else
+                {
+                    ceres::CostFunction *costFunction = BundleAdjustmentConstraint::create(K, point->point, 1.0);
                     // problem.AddResidualBlock(costFunction, new ceres::TukeyLoss(1.0), extrinsicPtr, pointPtr); // http://ceres-solver.org/nnls_modeling.html#instances
                     problem.AddResidualBlock(costFunction, new ceres::CauchyLoss(0.5), extrinsicPtr, pointPtr); // very good at outlier detection (but as the normal BA, kinda volatile to changes in the initialization)
                     // problem.AddResidualBlock(costFunction, nullptr, extrinsicPtr, pointPtr);
@@ -233,7 +243,7 @@ namespace SfM::solve
 
         // Fix the first camera to remove Gauge Ambiguity (fixes the coordinate system origin)
         // If we don't do this, the whole world can drift freely.
-        REAL* first_cam = &extrinsics[0];
+        REAL *first_cam = &extrinsics[0];
         problem.SetParameterBlockConstant(first_cam);
 
         // Solve Problem
@@ -251,7 +261,7 @@ namespace SfM::solve
         REAL scale = static_cast<REAL>(1);
         for (int i = 0; i < frames.size(); ++i)
         {
-            REAL* params = &extrinsics[i * 6];
+            REAL *params = &extrinsics[i * 6];
 
             REAL R_array[9];
             ceres::AngleAxisToRotationMatrix(params, R_array);
@@ -284,7 +294,7 @@ namespace SfM::solve
         }
 
         result.points = std::move(points3d);
-        for (auto& p : result.points)
+        for (auto &p : result.points)
         {
             Vec3 pointInWorldSpace = (startTransform * scale * p.homogeneous()).head<3>();
             if (p != DEFAULT_POINT_POS)

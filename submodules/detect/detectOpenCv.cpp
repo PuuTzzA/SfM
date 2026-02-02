@@ -180,5 +180,4 @@ namespace SfM::detect
 
         return resKeypoints;
     }
-
 } // Namespace SfM::detect

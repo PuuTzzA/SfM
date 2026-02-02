@@ -24,7 +24,7 @@ int main()
     auto images = SfM::io::loadImages(pathToImages);
     std::cout << "image count: " << images.size() << std::endl;
 
-    SfM::io::storeCalibration("../../Data/S21/calibration.json", SfM::calibrate::calibrateCamera(images, {10, 7}));
+    SfM::io::storeCalibration("../../Data/S21/calibration.json", SfM::calibrate::calibrateCamera(images, {6, 8}));
 
     auto calibration = SfM::io::loadCalibration("../../Data/S21/calibration.json");
 
@@ -48,7 +48,9 @@ int main()
         0, fy, cy,
         0, 0, 1; */
 
-    auto calibration = SfM::io::loadCalibration("../calibration_data/fr1_calib.json");
+    auto calibration = SfM::io::loadCalibration("../../Data/S21/calibration.json");
+    // auto calibration = SfM::io::loadCalibration("../calibration_data/fr1_calib.json");
+
     SfM::Mat3 K = calibration.K;
 
     std::cout << K << std::endl;
@@ -92,16 +94,18 @@ int main()
 
     SfM::Scene scene(K, startTransform, sceneOptions);
 
-    std::string pathToImages = "../../Data/rgbd_dataset_freiburg1_xyz/rgb";
+    // std::string pathToImages = "../../Data/rgbd_dataset_freiburg1_xyz/rgb";
+    std::string pathToImages = "../../Data/S21/tisch_small";
 
     std::vector<double> timestamps{};
 
     auto images = SfM::io::loadImages(pathToImages, &timestamps, 20);
 
-    for (auto &img : images)
+    // Don't do this for phone images, since they are already corrected and applying this would yield incorrect results
+    /* for (auto &img : images)
     {
         img = SfM::calibrate::undistort(img, calibration);
-    }
+    } */
 
     std::cout << "loaded " << images.size() << " images." << std::endl;
     for (int i = 0; i < images.size(); i++)
@@ -114,8 +118,11 @@ int main()
 
     scene.optimizeExtrinsicsAnd3dPoints();
 
-    SfM::io::exportSceneForBlender(scene, "../../Data/fr1_xyz.json", "./fr1_xyz");
-    SfM::io::exportTrack(scene.getExtrinsics(), timestamps, "../../Data/fr1_track.txt", "../../Data/rgbd_dataset_freiburg1_xyz/groundtruth.txt");
+    // SfM::io::storeImages(scene, "../../Data/S21/tisch_small_", "tisch_small_");
+    SfM::io::exportSceneForBlender(scene, "../../Data/S21/tisch_small.json", "./tisch_small");
+    // SfM::io::storeImages(scene, "../../Data/fr1/images", "fr1_");
+    // SfM::io::exportSceneForBlender(scene, "../../Data/fr1/fr1.json", "./images");
+    // SfM::io::exportTrack(scene.getExtrinsics(), timestamps, "../../Data/fr1_track.txt", "../../Data/rgbd_dataset_freiburg1_xyz/groundtruth.txt");
 #endif
     return 0;
     /*  // Testing

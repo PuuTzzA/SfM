@@ -36,6 +36,11 @@ namespace SfM::util
     cv::Mat imageToCvMat(const Image<T> &image);
 
     /**
+     * @brief Sample a point on an image with bilinear interpolation. Assumes img in BGR format
+     */
+    Vec3rgb getPixelBilinearUchar(const cv::Mat &img, Vec2 pos);
+
+    /**
      * @brief Draws points on an image using UV coordinates and saves the result.
      *
      * @param image Input image

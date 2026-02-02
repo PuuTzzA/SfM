@@ -52,6 +52,8 @@ namespace SfM
         std::vector<cv::Mat> &getImages();
         std::vector<Mat4> &getExtrinsics();
         std::vector<Vec3> &get3dPoints();
+        std::vector<Vec3rgb> &getColors();
+
         /**
          * @brief Returns the approximated 3d points, without points that are only seen from one frame (i.e. that have been marked as outliers)
          */
@@ -78,6 +80,7 @@ namespace SfM
     private:
         static REAL getMedian(std::vector<REAL> &v);
         Vec2 normalizePoints(Vec2 pixel);
+        Vec2 denormalizePoints(Vec2 normalizedPoint);
 
         /**
          * @brief Initializes all the vectors needed to match two frames with the eight point algorihtm.
@@ -97,7 +100,8 @@ namespace SfM
         std::vector<std::vector<Keypoint>> m_keypoints;
         std::vector<Frame> m_frames;
         std::vector<Mat4> m_extrinsics;
-        std::vector<Vec3> m_points3d; // Stores the 3d approximation in a vector with the approximation of a point with trackId i being on position i
+        std::vector<Vec3> m_points3d;  // Stores the 3d approximation in a vector with the approximation of a point with trackId i being on position i
+        std::vector<Vec3rgb> m_colors; // Stores the colors of the tracks in
         std::vector<Vec3> m_points3dFilterd;
         SCENE_OPTIONS m_sceneOptions = {};
 

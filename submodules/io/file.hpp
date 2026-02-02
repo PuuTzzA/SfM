@@ -38,7 +38,16 @@ namespace SfM::io
      * @param dir Path to the directory containing the images.
      * @return An std::vector of all the loaded images.
      */
-    std::vector<cv::Mat> loadImages(const std::string& dir, std::vector<double>* timestamps = nullptr, uint32_t limit = 0);
+    std::vector<cv::Mat> loadImages(const std::string &dir, std::vector<double> *timestamps = nullptr, uint32_t limit = 0);
+
+    /**
+     * @brief Stores the images of the scene in the supplied path
+     * @param scene Scene from which to get the images
+     * @param path Path to dir where the images should be stored
+     * @param name Base name of the images
+     * @param extension (Optional) File extension, default is "png"
+     */
+    void storeImages(Scene &scene, const std::string &path, const std::string &name, const std::string &extension = "png");
 
     /**
      * @brief Stores a camera calibration in a file.
@@ -46,7 +55,7 @@ namespace SfM::io
      * @param path The path of the file.
      * @param calibration The camera calibration to be stored.
      */
-    void storeCalibration(const std::string& path, const SfM::calibrate::CameraCalibration& calibration);
+    void storeCalibration(const std::string &path, const SfM::calibrate::CameraCalibration &calibration);
 
     /**
      * @brief Loads a camera calibration from a file.
@@ -54,7 +63,7 @@ namespace SfM::io
      * @param path The path of the file.
      * @return The camera calibration stored in the file.
      */
-    SfM::calibrate::CameraCalibration loadCalibration(const std::string& path);
+    SfM::calibrate::CameraCalibration loadCalibration(const std::string &path);
 
     /**
      * @brief Exports the track in a format that allows for evaluation.
@@ -63,6 +72,5 @@ namespace SfM::io
      * @param timestamps The timestamps of each camera pose in the track.
      * @param path The path of the file.
      */
-    void exportTrack(std::vector<Mat4>& extrinsics, const std::vector<double>& timestamps, const std::string& path, const std::string& ground_truth_path);
-
+    void exportTrack(std::vector<Mat4> &extrinsics, const std::vector<double> &timestamps, const std::string &path, const std::string &ground_truth_path);
 } // namespace SfM::io

@@ -9,7 +9,7 @@
 
 namespace SfM::io
 {
-    std::string getExtension(const std::string& path)
+    std::string getExtension(const std::string &path)
     {
         size_t dotPos = path.rfind('.');
         if (dotPos == std::string::npos)
@@ -19,7 +19,7 @@ namespace SfM::io
         return ext;
     }
 
-    Image<uchar> loadJpg(const std::string& path, int flags)
+    Image<uchar> loadJpg(const std::string &path, int flags)
     {
         std::ifstream file(path, std::ios::binary | std::ios::ate);
         if (!file)
@@ -29,8 +29,8 @@ namespace SfM::io
         }
         std::streamsize size = file.tellg();
         file.seekg(0, std::ios::beg);
-        uchar* jpegBuffer = new uchar[size];
-        if (!file.read((char*)jpegBuffer, size))
+        uchar *jpegBuffer = new uchar[size];
+        if (!file.read((char *)jpegBuffer, size))
         {
             return Image<uchar>(0, 0);
         }
@@ -52,7 +52,7 @@ namespace SfM::io
         // Decompress directly to vector
         // TJPF_RGB ensures standard RGB byte order
         if (tjDecompress2(decompressor, jpegBuffer, size, retImg.data, width,
-            0, height, TJPF_RGB, flags) < 0)
+                          0, height, TJPF_RGB, flags) < 0)
         {
             tjDestroy(decompressor);
             return Image<uchar>(0, 0);
@@ -63,7 +63,7 @@ namespace SfM::io
         return retImg;
     }
 
-    Image<uchar> loadImage(const std::string& path, int turboJpegFlags)
+    Image<uchar> loadImage(const std::string &path, int turboJpegFlags)
     {
         std::string ext = getExtension(path);
         if (ext == "jpg" || ext == "jpeg") // INFO: turbojpeg is consistantly 30-60ms faster than OpenCv (1920x1080)
@@ -103,7 +103,7 @@ namespace SfM::io
         }
     }
 
-    std::vector<std::vector<Vec2>> loadTrackedPoints(const std::string& path)
+    std::vector<std::vector<Vec2>> loadTrackedPoints(const std::string &path)
     {
         std::ifstream file(path);
         if (!file.is_open())
@@ -127,20 +127,20 @@ namespace SfM::io
         return result;
     }
 
-    std::vector<cv::Mat> loadImages(const std::string& dir, std::vector<double>* timestamps, uint32_t limit)
+    std::vector<cv::Mat> loadImages(const std::string &dir, std::vector<double> *timestamps, uint32_t limit)
     {
         std::vector<cv::Mat> images{};
         if (timestamps)
             *timestamps = std::vector<double>{};
 
-        std::filesystem::path dir_path{ dir };
+        std::filesystem::path dir_path{dir};
 
-        auto validExtension = [](const std::string& ext)
-            {
-                return ext == ".png" || ext == ".jpeg" || ext == ".jpg";
-            };
+        auto validExtension = [](const std::string &ext)
+        {
+            return ext == ".png" || ext == ".jpeg" || ext == ".jpg";
+        };
 
-        for (const auto& dir_entry : std::filesystem::directory_iterator{ dir_path })
+        for (const auto &dir_entry : std::filesystem::directory_iterator{dir_path})
         {
             auto entry_path = dir_entry.path();
 
@@ -157,16 +157,20 @@ namespace SfM::io
             }
 
             images.push_back(image);
-            if (timestamps) {
-                try {
+            if (timestamps)
+            {
+                try
+                {
                     timestamps->push_back(std::stod(entry_path.stem().string()));
                 }
-                catch (std::exception e) {
+                catch (std::exception e)
+                {
                     timestamps->push_back(NAN);
                 }
             }
 
-            if (images.size() == limit) {
+            if (images.size() == limit)
+            {
                 break;
             }
         }
@@ -174,14 +178,39 @@ namespace SfM::io
         return images;
     }
 
-    void storeCalibration(const std::string& path, const SfM::calibrate::CameraCalibration& calibration)
+    void storeImages(Scene &scene, const std::string &path, const std::string &name, const std::string &extension)
+    {
+        namespace fs = std::filesystem;
+
+        const std::vector<cv::Mat> &images = scene.getImages();
+
+        if (!path.empty() && !fs::exists(path))
+        {
+            fs::create_directories(path);
+        }
+
+        for (size_t i = 0; i < images.size(); ++i)
+        {
+            std::ostringstream oss;
+            oss << name << std::setw(4) << std::setfill('0') << i << "." << extension;
+
+            fs::path fullPath = fs::path(path) / oss.str();
+
+            if (!images[i].empty())
+            {
+                cv::imwrite(fullPath.string(), images[i]);
+            }
+        }
+    }
+
+    void storeCalibration(const std::string &path, const SfM::calibrate::CameraCalibration &calibration)
     {
         using namespace nlohmann;
 
         json matrix = json::array();
         json distCoeffs = json::array();
 
-        std::cout << calibration.matrix.type() << std::endl;
+        // std::cout << calibration.matrix.type() << std::endl;
 
         for (int i = 0; i < 3; i++)
         {
@@ -212,9 +241,11 @@ namespace SfM::io
         }
         file << data.dump(4);
         file.close();
+
+        std::cout << "Exported Calibratioin to " << path << std::endl;
     }
 
-    SfM::calibrate::CameraCalibration loadCalibration(const std::string& path)
+    SfM::calibrate::CameraCalibration loadCalibration(const std::string &path)
     {
         using namespace nlohmann;
 
@@ -228,8 +259,8 @@ namespace SfM::io
 
         json data = json::parse(file);
 
-        const json& matrix = data["matrix"];
-        const json& distCoeffs = data["distortion"];
+        const json &matrix = data["matrix"];
+        const json &distCoeffs = data["distortion"];
 
         cv::Matx33d cvMatrix{};
         cv::Vec<double, 5> cvDistCoeffs{};
@@ -249,11 +280,11 @@ namespace SfM::io
             }
         }
 
-        return calibrate::CameraCalibration{ K, cv::Mat{cvMatrix}, cv::Mat{cvDistCoeffs} };
+        return calibrate::CameraCalibration{K, cv::Mat{cvMatrix}, cv::Mat{cvDistCoeffs}};
     }
 
-    void exportTrack(std::vector<Mat4>& extrinsics, const std::vector<double>& timestamps, const std::string& path, const std::string& ground_truth_path) {
-
+    void exportTrack(std::vector<Mat4> &extrinsics, const std::vector<double> &timestamps, const std::string &path, const std::string &ground_truth_path)
+    {
         std::ifstream ground_truth(ground_truth_path);
 
         double tx, ty, tz, qx, qy, qz, qw;
@@ -262,14 +293,17 @@ namespace SfM::io
 
         std::string prev_line = "";
 
-        auto find_timestamp = [&](double t) {
-            while (std::getline(ground_truth, line)) {
+        auto find_timestamp = [&](double t)
+        {
+            while (std::getline(ground_truth, line))
+            {
                 std::istringstream iss(line);
                 double timestamp;
 
                 iss >> timestamp;
 
-                if (timestamp > t) {
+                if (timestamp > t)
+                {
                     std::istringstream prev_iss(prev_line);
 
                     double prev_timestamp;
@@ -278,10 +312,12 @@ namespace SfM::io
 
                     std::istringstream best_iss;
 
-                    if (abs(timestamp - t) < abs(prev_timestamp - t)) {
+                    if (abs(timestamp - t) < abs(prev_timestamp - t))
+                    {
                         best_iss = std::move(iss);
                     }
-                    else {
+                    else
+                    {
                         best_iss = std::move(prev_iss);
                     }
 
@@ -294,49 +330,51 @@ namespace SfM::io
 
                 prev_line = line;
             }
-            };
+        };
 
         find_timestamp(timestamps[0]);
 
         Mat4 gMat = Mat4::Identity();
 
-        Eigen::Quaternion<REAL> gq = Eigen::Quaternion{ qw, qx, qy, qz };
+        Eigen::Quaternion<REAL> gq = Eigen::Quaternion{qw, qx, qy, qz};
 
-        Vec3 gtStart{ tx, ty, tz };
+        Vec3 gtStart{tx, ty, tz};
 
         gMat.block<3, 3>(0, 0) = Mat3(gq);
-        gMat.block<3, 1>(0, 3) = Vec3{ tx, ty, tz };
+        gMat.block<3, 1>(0, 3) = Vec3{tx, ty, tz};
 
-        
         ground_truth.clear();
         ground_truth.seekg(0, std::ios::beg);
-        
+
         find_timestamp(timestamps.back());
-        
-        Vec3 gtEnd{ tx, ty, tz };
-        
+
+        Vec3 gtEnd{tx, ty, tz};
+
         double scale = (gtEnd - gtStart).norm() / (extrinsics.back().block<3, 1>(0, 3) - extrinsics[0].block<3, 1>(0, 3)).norm();
 
         std::cout << scale << std::endl;
 
-        for(auto& pose : extrinsics) {
+        for (auto &pose : extrinsics)
+        {
             pose.block<3, 1>(0, 3) *= scale;
         }
-        
+
         Mat4 universal_transform = gMat * extrinsics[0].inverse();
         std::ofstream file(path);
 
-        if (!file) {
+        if (!file)
+        {
             std::cerr << "Could not open file '" << path << "'\n";
         }
 
-        for (uint32_t i = 0; i < extrinsics.size(); i++) {
+        for (uint32_t i = 0; i < extrinsics.size(); i++)
+        {
             auto timestamp = timestamps[i];
             auto pose = universal_transform * extrinsics[i];
 
             Vec3 t = pose.block<3, 1>(0, 3);
             Mat3 rotationMat = pose.block<3, 3>(0, 0);
-            Eigen::Quaternion<REAL> q{ rotationMat };
+            Eigen::Quaternion<REAL> q{rotationMat};
 
             file << std::fixed << std::setprecision(4) << timestamp << " " << t.x() << " " << t.y() << " " << t.z() << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << std::endl;
         }

@@ -18,6 +18,7 @@ namespace SfM
     using MatX = Eigen::Matrix<REAL, Eigen::Dynamic, Eigen::Dynamic>;
 
     using Vec2I = Eigen::Matrix<int, 2, 1>;
+    using Vec3rgb = Eigen::Matrix<unsigned char, 3, 1>;
 
     constexpr REAL EPSILON = static_cast<REAL>(1e-6);
 
@@ -143,12 +144,12 @@ namespace SfM
     /**
      * @brief An approximation represents one 3d point (over multiple frames)
      * @param point 3d approximation of the point
-     * @param trackId Unique Id per track
+     * @param color color of the track
      */
     struct Approximation
     {
         Vec3 point;
-        int trackId;
+        Vec3rgb color;
     };
 
     /**

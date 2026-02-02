@@ -1,16 +1,20 @@
 #include "calibrate.hpp"
 
-namespace SfM::calibrate {
+namespace SfM::calibrate
+{
 
-    CameraCalibration calibrateCamera(const std::vector<cv::Mat>& images, cv::Size boardSize) {
+    CameraCalibration calibrateCamera(const std::vector<cv::Mat> &images, cv::Size boardSize)
+    {
 
         float squareSize = 1.0f;
 
         std::cout << "Setting object points\n";
         std::vector<cv::Point3f> objectPoints{};
 
-        for(uint32_t i = 0; i < boardSize.height; i++) {
-            for(uint32_t j = 0; j < boardSize.width; j++) {
+        for (uint32_t i = 0; i < boardSize.height; i++)
+        {
+            for (uint32_t j = 0; j < boardSize.width; j++)
+            {
                 objectPoints.emplace_back(j * squareSize, i * squareSize, 0.0f);
             }
         }
@@ -20,15 +24,16 @@ namespace SfM::calibrate {
 
         cv::Size imageSize;
 
-        for(const auto& image : images) {
+        for (const auto &image : images)
+        {
             imageSize = image.size();
 
             std::vector<cv::Point2f> corners;
 
-            std::cout << "Finding chessboard corners, image size: " << image.rows << ", " << image.cols << "\n";
+            std::cout << "Finding chessboard corners, image size: " << image.cols << ", " << image.rows << "\n";
             bool found = cv::findChessboardCorners(image, boardSize, corners, cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_NORMALIZE_IMAGE);
             std::cout << "Found: " << found << std::endl;
-            if(!found)
+            if (!found)
                 continue;
 
             cv::Mat grayscaleImage;
@@ -52,17 +57,28 @@ namespace SfM::calibrate {
             calibration.matrix,
             calibration.distortionCoeffs,
             rvecs,
-            tvecs
-        );
+            tvecs);
 
+        std::cout << "Calibration RMS Error: " << rms << std::endl;
+        if (rms > 1.0)
+        {
+            std::cerr << "WARNING: Calibration is poor. Check board size or image quality." << std::endl;
+        }
         return calibration;
     }
 
-    cv::Mat undistort(const cv::Mat& image, const CameraCalibration& calibration) {
+    cv::Mat undistort(const cv::Mat &image, const CameraCalibration &calibration)
+    {
         cv::Mat undistorted;
-        cv::undistort(image, undistorted, calibration.matrix, calibration.distortionCoeffs);
-        
+
+        cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(
+            calibration.matrix,
+            calibration.distortionCoeffs,
+            image.size(),
+            1,
+            image.size());
+
+        cv::undistort(image, undistorted, calibration.matrix, calibration.distortionCoeffs, newCameraMatrix);
         return undistorted;
     }
-
 } // namespace SfM::calibrate

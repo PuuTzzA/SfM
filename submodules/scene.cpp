@@ -164,6 +164,7 @@ namespace SfM
     void Scene::initializeEgithPointVariables()
     {
         m_points3d.resize(m_currentNumTracks, Vec3::Zero());
+        m_colors.resize(m_currentNumTracks, Vec3rgb::Zero());
         m_point3dCounts.resize(m_currentNumTracks, 0);
         m_extrinsics.push_back(m_accumulatedPose);
     }
@@ -181,6 +182,7 @@ namespace SfM
         }
 
         m_points3d.resize(m_currentNumTracks, Vec3::Zero());
+        m_colors.resize(m_currentNumTracks, Vec3rgb::Zero());
         m_point3dCounts.resize(m_currentNumTracks, 0);
         int n = m_frames.size() - 1;
 
@@ -364,10 +366,12 @@ namespace SfM
             }
 
             Vec3 newPointGlobal = (m_accumulatedPose * (m_accumulatedScale * m_frame23.points[j]).homogeneous()).head<3>();
+            Vec3rgb newPointColor = util::getPixelBilinearUchar(m_images[n - 1], denormalizePoints(m_shared23points2[j]));
 
             if (m_point3dCounts[trackId] == 0)
             {
                 m_points3d[trackId] = newPointGlobal;
+                m_colors[trackId] = newPointColor;
                 m_point3dCounts[trackId] = 1;
             }
             else // Update 3d point using a running average
@@ -378,6 +382,20 @@ namespace SfM
 
                     Vec3 oldPoint = m_points3d[trackId];
                     m_points3d[trackId] = oldPoint + (newPointGlobal - oldPoint) / static_cast<REAL>(N + 1);
+
+                    Vec3rgb oldColor = m_colors[trackId];
+
+                    auto accumulateUchar = [N](unsigned char cNew, unsigned char cOld) -> unsigned char {
+                        float cNewf = static_cast<float>(cNew);
+                        float cOldf = static_cast<float>(cOld);
+                        float res = cOldf + (cNewf - cOldf) / static_cast<float>(N + 1);
+                        res = std::clamp(res, 0.f, 255.f);
+                        return static_cast<unsigned char>(res);
+                    };
+
+                    m_colors[trackId][0] = accumulateUchar(newPointColor[0], oldColor[0]);
+                    m_colors[trackId][1] = accumulateUchar(newPointColor[1], oldColor[1]);
+                    m_colors[trackId][2] = accumulateUchar(newPointColor[2], oldColor[2]);
 
                     m_point3dCounts[trackId]++;
                 }
@@ -443,6 +461,11 @@ namespace SfM
         return m_points3dFilterd;
     };
 
+    std::vector<Vec3rgb> &Scene::getColors()
+    {
+        return m_colors;
+    }
+
     REAL Scene::getMedian(std::vector<REAL> &v)
     {
         size_t n = v.size();
@@ -458,5 +481,13 @@ namespace SfM
         p_homog << pixel[0], pixel[1], 1.0f;
         Vec3 ray = m_K_inv * p_homog;
         return Vec2(ray[0], ray[1]);
+    };
+
+    Vec2 Scene::denormalizePoints(Vec2 normalizedPoint)
+    {
+        Vec3 ray;
+        ray << normalizedPoint[0], normalizedPoint[1], 1.0f;
+        Vec3 p_homog = m_K * ray;
+        return Vec2(p_homog[0], p_homog[1]);
     };
 } // Namespace SfM

@@ -16,6 +16,7 @@ namespace SfM::io
      * @param K Intrinsics matrix
      * @param cameraExtrinsics Vector of cameraExtrinsics
      * @param points Vector of 3d points
+     * @param colors Vector of colors of the points in uchar [r, g, b]
      * @param path Output path
      * @param pathToImages Path to folder with images, RELATIVE TO PARAM path!
      */
@@ -24,6 +25,7 @@ namespace SfM::io
                                 Mat3 K,
                                 std::vector<Mat4> &cameraExtrinsics,
                                 std::vector<Vec3> &points,
+                                std::vector<Vec3rgb> &colors,
                                 std::string path,
                                 std::string pathToImages = "");
 

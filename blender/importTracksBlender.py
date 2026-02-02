@@ -5,6 +5,7 @@ import mathutils
 
 # ================= CONFIGURATION =================
 RELATIVE_PATH = "../../Data/S21/tisch_small.json"
+# RELATIVE_PATH = "../../Data/fr1/fr1.json"
 # =================================================
 
 def get_absolute_path(rel_path):
@@ -45,7 +46,6 @@ def setup_scene_dimensions(width, height):
 def apply_intrinsics_to_camera(cam_data, K_list, width, height):
     """
     Computes Focal Length and Shift based on Intrinsics Matrix K.
-    K is a flat list of 9 elements (Row-Major 3x3).
     """
     # K structure: [fx, 0, cx,  0, fy, cy,  0, 0, 1]
     fx = K_list[0]
@@ -53,28 +53,19 @@ def apply_intrinsics_to_camera(cam_data, K_list, width, height):
     fy = K_list[4]
     cy = K_list[5]
 
-    # 1. Set Sensor Fit
-    # Blender defaults to 36mm sensor width. We stick to that to calculate focal length.
     sensor_width_mm = 36.0
     cam_data.sensor_fit = 'HORIZONTAL'
     cam_data.sensor_width = sensor_width_mm
 
-    # 2. Calculate Focal Length in mm
-    # Formula: F_mm = f_pixel * (Sensor_width_mm / Image_width_pixel)
     focal_length_mm = fx * (sensor_width_mm / width)
     cam_data.lens = focal_length_mm
 
-    # 3. Calculate Shift (Principal Point Offset)
-    # Blender Shift is normalized (0.0 to 1.0 relative to largest dimension)
-    # OpenCV Origin: Top-Left. Blender Center: (0,0).
     shift_x = -(cx - (width / 2.0)) / width
-    shift_y = (cy - (height / 2.0)) / width # Dividing by width because sensor fit is HORIZONTAL
+    shift_y = (cy - (height / 2.0)) / width 
 
     cam_data.shift_x = shift_x
     cam_data.shift_y = shift_y
 
-    # 4. Handle Non-Square Pixels (Pixel Aspect Ratio)
-    # If fy != fx, pixels are not perfectly square.
     if fx != 0:
         ratio = fy / fx
         bpy.context.scene.render.pixel_aspect_y = ratio
@@ -82,13 +73,11 @@ def apply_intrinsics_to_camera(cam_data, K_list, width, height):
 
 def setup_background_images(cam_obj, json_file_path, relative_img_path):
     """
-    Resolves the image path, looks for the first image in that folder,
-    and sets up the camera background sequence.
+    Resolves the image path and sets up the camera background sequence.
     """
     if not relative_img_path or not cam_obj:
         return
 
-    # 1. Resolve Path: Combine json file directory with the relative image path
     base_dir = os.path.dirname(json_file_path)
     abs_img_dir = os.path.normpath(os.path.join(base_dir, relative_img_path))
 
@@ -96,7 +85,6 @@ def setup_background_images(cam_obj, json_file_path, relative_img_path):
         print(f"Warning: Image directory not found at: {abs_img_dir}")
         return
 
-    # 2. Find the first valid image file in the directory
     valid_exts = {'.png', '.jpg', '.jpeg', '.tga', '.exr', '.tif', '.tiff'}
     files = sorted([f for f in os.listdir(abs_img_dir) if os.path.splitext(f)[1].lower() in valid_exts])
 
@@ -107,7 +95,6 @@ def setup_background_images(cam_obj, json_file_path, relative_img_path):
     first_image_path = os.path.join(abs_img_dir, files[0])
     print(f"Loading image sequence starting from: {first_image_path}")
 
-    # 3. Load the Image into Blender
     try:
         img_block = bpy.data.images.load(first_image_path)
         img_block.source = 'SEQUENCE'
@@ -115,11 +102,8 @@ def setup_background_images(cam_obj, json_file_path, relative_img_path):
         print(f"Error loading image: {e}")
         return
 
-    # 4. Attach to Camera
     cam = cam_obj.data
     cam.show_background_images = True
-    
-    # Remove existing backgrounds if any
     cam.background_images.clear()
     
     bg = cam.background_images.new()
@@ -135,18 +119,52 @@ def setup_background_images(cam_obj, json_file_path, relative_img_path):
         bg.image_user.use_auto_refresh = True
         print(f"Set background sequence length to {num_frames} frames.")
 
-def create_point_cloud_object(name, coords, collection):
+def create_point_cloud_object(name, coords, colors, collection):
+    """
+    Creates a mesh from coords, applies colors (if present), and optionally converts to PointCloud.
+    """
     if not coords: return None
-    # JSON arrays might be lists of lists, no conversion needed for from_pydata usually
+    
+    # 1. Create Mesh
     mesh = bpy.data.meshes.new(name=f"{name}_TempMesh")
-    mesh.from_pydata(coords, [], [])
+    mesh.from_pydata(coords, [], []) # Create vertices only
+    
     temp_obj = bpy.data.objects.new(name, mesh)
     collection.objects.link(temp_obj)
+    
+    # 2. Apply Colors (if available)
+    if colors and len(colors) == len(coords):
+        print("Importing Point Cloud Colors...")
+        
+        # Create a generic Float Color attribute (RGBA)
+        # This is compatible with both Mesh and Point Cloud objects
+        # domain='POINT' puts the color on the vertex/point
+        attr = mesh.attributes.new(name="color", type='FLOAT_COLOR', domain='POINT')
+        
+        # Flatten the list and normalize 0-255 -> 0.0-1.0
+        # Blender expects a flat list [r, g, b, a, r, g, b, a, ...]
+        flat_color_data = []
+        for rgb in colors:
+            r = rgb[0] / 255.0
+            g = rgb[1] / 255.0
+            b = rgb[2] / 255.0
+            flat_color_data.extend([r, g, b, 1.0]) # Add Alpha=1.0
+        
+        # Fast bulk assignment
+        attr.data.foreach_set("color", flat_color_data)
+    else:
+        if colors:
+            print(f"Warning: Color count ({len(colors)}) does not match Point count ({len(coords)}). Skipping colors.")
+
+    # 3. Convert to Native Point Cloud (if possible)
     bpy.context.view_layer.objects.active = temp_obj
     temp_obj.select_set(True)
+    
     try:
         bpy.ops.object.convert(target='POINTCLOUD')
         pc_obj = bpy.context.active_object
+        
+        # Cleanup the temporary mesh data block
         bpy.data.meshes.remove(mesh)
         return pc_obj
     except RuntimeError:
@@ -156,9 +174,8 @@ def create_point_cloud_object(name, coords, collection):
 def list_to_matrix(flat_list):
     """Converts a flat list of 16 floats into a 4x4 Mathutils Matrix."""
     if len(flat_list) != 16:
-        return mathutils.Matrix() # Identity fallback
+        return mathutils.Matrix()
     
-    # Create rows
     rows = [
         flat_list[0:4],
         flat_list[4:8],
@@ -183,6 +200,7 @@ def main():
     K = data.get('K', [])
     extrinsics_flat = data.get('extrinsics', [])
     points_coords = data.get('points', [])
+    points_colors = data.get('colors', None) # Get colors if they exist
     img_rel_path = data.get('pathToImages', None)
 
     # 3. Setup Collection
@@ -209,14 +227,11 @@ def main():
         cam_obj = bpy.data.objects.new(name="ImportedCamera", object_data=cam_data)
         new_col.objects.link(cam_obj)
         
-        # --- NEW: APPLY INTRINSICS ---
         if K and len(K) == 9:
             apply_intrinsics_to_camera(cam_data, K, width, height)
         else:
             print("Warning: No valid Intrinsics (K) found in JSON.")
-        # -----------------------------
 
-        # Set Framerate/Range
         bpy.context.scene.frame_start = 1
         bpy.context.scene.frame_end = len(extrinsics_flat)
         
@@ -224,7 +239,6 @@ def main():
         
         for i, flat_mat in enumerate(extrinsics_flat):
             frame_num = i + 1
-            # Convert flat list to Matrix
             mat = list_to_matrix(flat_mat)
             
             cam_obj.matrix_world = mat
@@ -236,28 +250,26 @@ def main():
         bpy.context.view_layer.objects.active = cam_obj
         
         print("Calculating Motion Path...")
-        # Actually calculate the path lines
         bpy.ops.object.paths_calculate(range='MANUAL')
 
-        # Optional: visual path
-        # bpy.ops.object.paths_calculate(range='MANUAL')
-
-        # --- SETUP BACKGROUND IMAGES ---
         if img_rel_path:
             setup_background_images(cam_obj, full_path, img_rel_path)
-        # -------------------------------
 
-    # 6. Create Point Cloud
+    # 6. Create Point Cloud (with Colors)
     if points_coords:
         print(f"Creating Point Cloud ({len(points_coords)} points)...")
-        pc_obj = create_point_cloud_object("PointCloud", points_coords, new_col)
+        # Passed points_colors to the function
+        pc_obj = create_point_cloud_object("PointCloud", points_coords, points_colors, new_col)
         
         if pc_obj:
-            # Add Geometry Nodes modifier to make points renderable (Cycles)
+            # Add Geometry Nodes modifier
             mod = pc_obj.modifiers.new(name="GeoNodes", type='NODES')
-            node_group_name = "points" # Assumes you have a node group named "points" to instance spheres/discs
+            node_group_name = "points" 
             if node_group_name in bpy.data.node_groups:
                 mod.node_group = bpy.data.node_groups[node_group_name]
+                print(f"Assigned Geometry Nodes group: {node_group_name}")
+            else:
+                print(f"Note: Geometry Node group '{node_group_name}' not found. Created object without modifier.")
 
     bpy.ops.object.select_all(action='DESELECT')
     print("Import Finished Successfully.")
