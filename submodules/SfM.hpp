@@ -96,7 +96,6 @@ namespace SfM
      * @param trackId Unique Id per Track
      * @param indexInLastFrame Matching Observation in the previous Frame
      * @param inlier Bool is false if RANSAC marks this point as an outlier
-     * @param wasOutlierBefore Helper bool to check if the obervation is really an outlier or just a new track 
      */
     struct Observation
     {
@@ -110,7 +109,6 @@ namespace SfM
         int trackId;
         int indexInLastFrame = UNINITIALIZED;
         bool inlier = true;
-        bool wasOutlierBefore = false;
     };
 
     /**

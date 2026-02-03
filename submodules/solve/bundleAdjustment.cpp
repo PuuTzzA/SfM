@@ -298,8 +298,9 @@ namespace SfM::solve
         result.inlierMask.resize(result.points.size());
         for (int i = 0; i < result.inlierMask.size(); i++)
         {
-            result.points[i] = (startTransform * scale * result.points[i].homogeneous()).head<3>();
             result.inlierMask[i] = result.points[i] != DEFAULT_POINT_POS;
+
+            result.points[i] = (startTransform * scale * result.points[i].homogeneous()).head<3>();
         }
 
         return result;

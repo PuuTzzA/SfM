@@ -99,7 +99,6 @@ namespace SfM
                 if (m_sceneOptions.splitTracks && kpA.observation != nullptr && !kpA.observation->inlier) // If the obervation was found to be an outlier, create a new TrackId
                 {
                     kpA.observation->inlier = true; // reset inlier flag for the new track
-                    kpA.observation->wasOutlierBefore = true;
                     kpA.observation->indexInLastFrame = Observation::UNINITIALIZED;
                     kpA.observation->trackId = m_currentNumTracks;
 
@@ -282,11 +281,7 @@ namespace SfM
                 for (int i = 0, max = inlierMask.size(); i < max; i++)
                 {
                     newObs[indicesOfNewerObservations[i]]->inlier = inlierMask[i];
-
-                    if (oldObs[indicesOfOlderObservations[i]]->wasOutlierBefore && inlierMask[i] == false)
-                    {
-                        oldObs[indicesOfOlderObservations[i]]->inlier = false;
-                    }
+                    oldObs[indicesOfOlderObservations[i]]->inlier &= inlierMask[i];
                 }
 
                 m_frame23 = solve::eightPointAlgorithm(inliers1, inliers2);
@@ -463,7 +458,9 @@ namespace SfM
         std::vector<Approximation> temp = m_points3dFilterd.size() > 0 ? m_points3dFilterd : m_points3d;
         m_points3dFilterd.clear();
 
-        for (const auto &p : temp)
+        size_t sizeBefore = temp.size();
+
+        for (auto &p : temp)
         {
             if (p.point == Vec3::Zero())
             {
@@ -471,9 +468,15 @@ namespace SfM
             }
             if (m_sceneOptions.useEightPoint && p.color == Vec3rgb::Zero())
             {
+                p.color = Vec3rgb(0, 255, 255);
                 continue;
             }
             m_points3dFilterd.push_back(p);
+        }
+
+        if (m_sceneOptions.verbose)
+        {
+            std::cout << "Scene::getApproximationsFilterd: removed " << sizeBefore - m_points3dFilterd.size() << " points." << std::endl;
         }
 
         return m_points3dFilterd;

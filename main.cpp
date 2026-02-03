@@ -87,7 +87,7 @@ int main()
         .ransacOptions = ransacOptions,
         .bundleAdjustmentOptions = baOptions,
         .useEightPoint = true,
-        .splitTracks = false,
+        .splitTracks = true,
         .useRANSAC = true,
         .verbose = true,
     };
