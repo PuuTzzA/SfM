@@ -39,10 +39,10 @@ Before running the application, update the file paths at the beginning of the `m
 *   **`relativeImageLocation`**: The relative path from the `outputPath` to the image directory. This is required for Blender to correctly load images as camera backgrounds.
 
 **Algorithm Parameters:**
-You can tune the reconstruction process by modifying the options structs in `main()` (e.g., `MATCHING_OPTIONS`, `RANSAC_OPTIONS`, `SCENE_OPTIONS`). Please refer to the corresponding header files for a detailed explanation of specific parameters like RANSAC thresholds or Bundle Adjustment settings.
+You can tune the reconstruction process by modifying the options structs in `main()` (e.g., `MATCHING_OPTIONS`, `RANSAC_OPTIONS`, `SCENE_OPTIONS`). Please refer to the corresponding header files for a detailed explanation of specific parameters.
 
 ### Visualization in Blender
-To visualize the computed scene (cameras and point cloud):
+To visualize the computed scene (camera path and point cloud):
 
 1.  Open the Blender project file: `./blender/SfM_test.blend`.
 2.  Navigate to the **Scripting** tab.
