@@ -33,25 +33,12 @@ int main()
     std::cout << "Distortion Coefficients:\n"
               << calibration.distortionCoeffs << std::endl;
 #else
-    // Explicit definition of the intrinsics Matrix
-    /* SfM::REAL width_px = 1920.;
-    SfM::REAL height_px = 1080.;
-    SfM::REAL f_mm = 50.;
-    SfM::REAL sensor_mm = 36.f;
+    std::string pathToCalibration = "../../Data/S21_calibration.json";
+    std::string pathToImages = "../../Data/crab";
+    std::string outputPath = "../../Data/crab.json";
+    std::string relativeImageLocation = "./crab"; // relative location from the output to the images, so that the images can be set as camera background in blender
 
-    SfM::REAL fx = f_mm * width_px / sensor_mm; // focal length in pixel
-    SfM::REAL fy = fx;
-    SfM::REAL cx = width_px / 2.0f;  // 960
-    SfM::REAL cy = height_px / 2.0f; // 540
-
-    SfM::Mat3 K;
-    K << fx, 0, cx,
-        0, fy, cy,
-        0, 0, 1; */
-
-    auto calibration = SfM::io::loadCalibration("../../Data/S21/calibration.json");
-    // auto calibration = SfM::io::loadCalibration("../calibration_data/fr1_calib.json");
-
+    auto calibration = SfM::io::loadCalibration(pathToCalibration);
     SfM::Mat3 K = calibration.K;
 
     std::cout << K << std::endl;
@@ -95,9 +82,6 @@ int main()
 
     SfM::Scene scene(K, startTransform, sceneOptions);
 
-    // std::string pathToImages = "../../Data/rgbd_dataset_freiburg1_xyz/rgb";
-    std::string pathToImages = "../../Data/S21/krabbe_small";
-
     auto images = SfM::io::loadImages(pathToImages, 0, 27);
 
     // Don't do this for phone images, since they are already corrected and applying this would yield incorrect results
@@ -117,10 +101,7 @@ int main()
 
     scene.optimizeExtrinsicsAnd3dPoints();
 
-    SfM::io::storeImages(scene, "../../Data/S21/krabbe", "krabbe_");
-    SfM::io::exportSceneForBlender(scene, "../../Data/S21/krabbe.json", "./krabbe");
-    // SfM::io::storeImages(scene, "../../Data/fr1/images", "fr1_");
-    // SfM::io::exportSceneForBlender(scene, "../../Data/fr1/fr1.json", "./images");
-    // SfM::io::exportTrack(scene.getExtrinsics(), timestamps, "../../Data/fr1_track.txt", "../../Data/rgbd_dataset_freiburg1_xyz/groundtruth.txt");
+    // SfM::io::storeImages(scene, "../../Data/S21/krabbe", "krabbe_");
+    SfM::io::exportSceneForBlender(scene, outputPath, relativeImageLocation);
 #endif
 }

@@ -4,8 +4,7 @@ import json
 import mathutils
 
 # ================= CONFIGURATION =================
-RELATIVE_PATH = "../../Data/S21/tisch_small.json"
-# RELATIVE_PATH = "../../Data/fr1/fr1.json"
+RELATIVE_PATH = "../../Data/crab.json"
 # =================================================
 
 def get_absolute_path(rel_path):
