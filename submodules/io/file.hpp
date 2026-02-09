@@ -34,11 +34,13 @@ namespace SfM::io
 
     /**
      * @brief Loads all images inside a directory. Only files with the extension ".png", ".jpeg" or ".jpg" will be loaded.
-     *
      * @param dir Path to the directory containing the images.
+     * @param startIndex Start index of the range to load (inclusive)
+     * @param endIndex End index of the range to load (exclusive, defaults to all the images)
+     * @param timestamps Load timestamps of the test data
      * @return An std::vector of all the loaded images.
      */
-    std::vector<cv::Mat> loadImages(const std::string &dir, std::vector<double> *timestamps = nullptr, uint32_t limit = 0);
+    std::vector<cv::Mat> loadImages(const std::string &dir, uint32_t startIndex = 0, uint32_t endIndex = std::numeric_limits<uint32_t>::max(), std::vector<double> *timestamps = nullptr);
 
     /**
      * @brief Stores the images of the scene in the supplied path
@@ -46,8 +48,9 @@ namespace SfM::io
      * @param path Path to dir where the images should be stored
      * @param name Base name of the images
      * @param extension (Optional) File extension, default is "png"
+     * @param startIndex Index of the first frame
      */
-    void storeImages(Scene &scene, const std::string &path, const std::string &name, const std::string &extension = "png");
+    void storeImages(Scene &scene, const std::string &path, const std::string &name, const std::string &extension = "png", const uint32_t startIndex = 1);
 
     /**
      * @brief Stores a camera calibration in a file.

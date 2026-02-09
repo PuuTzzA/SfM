@@ -127,7 +127,7 @@ namespace SfM::io
         return result;
     }
 
-    std::vector<cv::Mat> loadImages(const std::string &dir, std::vector<double> *timestamps, uint32_t limit)
+    std::vector<cv::Mat> loadImages(const std::string &dir, uint32_t startIndex, uint32_t endIndex, std::vector<double> *timestamps)
     {
         std::vector<cv::Mat> images{};
         if (timestamps)
@@ -140,8 +140,21 @@ namespace SfM::io
             return ext == ".png" || ext == ".jpeg" || ext == ".jpg";
         };
 
+        uint32_t current = 0;
+
         for (const auto &dir_entry : std::filesystem::directory_iterator{dir_path})
         {
+            if (current < startIndex)
+            {
+                current++;
+                continue;
+            };
+            if (current >= endIndex)
+            {
+                break;
+            }
+            current++;
+
             auto entry_path = dir_entry.path();
 
             if (dir_entry.is_directory() || !validExtension(entry_path.extension().string()))
@@ -168,17 +181,11 @@ namespace SfM::io
                     timestamps->push_back(NAN);
                 }
             }
-
-            if (images.size() == limit)
-            {
-                break;
-            }
         }
-
         return images;
     }
 
-    void storeImages(Scene &scene, const std::string &path, const std::string &name, const std::string &extension)
+    void storeImages(Scene &scene, const std::string &path, const std::string &name, const std::string &extension, const uint32_t startIndex)
     {
         namespace fs = std::filesystem;
 
@@ -189,10 +196,11 @@ namespace SfM::io
             fs::create_directories(path);
         }
 
+        uint32_t currentIndex = startIndex;
         for (size_t i = 0; i < images.size(); ++i)
         {
             std::ostringstream oss;
-            oss << name << std::setw(4) << std::setfill('0') << i << "." << extension;
+            oss << name << std::setw(4) << std::setfill('0') << currentIndex++ << "." << extension;
 
             fs::path fullPath = fs::path(path) / oss.str();
 

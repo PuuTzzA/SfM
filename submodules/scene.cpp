@@ -191,6 +191,7 @@ namespace SfM
         if (m_frames.size() < 2)
         {
             std::cerr << "Scene::solveForLastAddedFrame called but the number of frames was not >= 2, was: " << m_frames.size() << "!" << std::endl;
+            return;
         }
 
         m_points3d.resize(m_currentNumTracks, {.point = Vec3::Zero(), .color = Vec3rgb::Zero()});
