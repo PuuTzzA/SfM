@@ -138,8 +138,16 @@ namespace SfM::util
      */
     inline Mat4 cvCameraToBlender(Mat4 cvCam)
     {
-        return blendCvMat4() * cvCam * calculateTransformationMatrixDeg(180, 0, 0, Vec3(0, 0, 0));
+        return blendCvMat4() * cvCam * blendCvMat4(); // calculateTransformationMatrixDeg(180, 0, 0, Vec3(0, 0, 0));
     }
+
+    /** 
+     * @brief Transforms a matrix from blender space to CV space
+     */
+    /* inline Mat4 blendToCv(Mat4 blendCam)
+    {
+
+    } */
 
     /**
      * @brief Converts a rgb image to REAL.

@@ -80,6 +80,7 @@ namespace SfM::match
      */
     std::vector<std::tuple<int, int>> matchTwoSided(const std::vector<Keypoint> &keypoints1, const std::vector<Keypoint> &keypoints2, const MATCHING_OPTIONS &options);
 
+    std::vector<std::tuple<int, int>> matchTwoSided2(const std::vector<Keypoint> &keypoints1, const std::vector<Keypoint> &keypoints2, const MATCHING_OPTIONS &options);
     // vl hungarian method
 
 } // Namespace SfM::match

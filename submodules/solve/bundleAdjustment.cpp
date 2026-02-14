@@ -153,12 +153,17 @@ namespace SfM::solve
             std::cout << "Setting initial values to default." << std::endl;
         }
 
+        Mat4 startMat = initialGuess ? initialGuess->extrinsics[0] : Mat4::Identity();
+        Mat4 startMatInv = startMat.inverse();
+
         points3d.resize(numTotTracks);
         for (int i = 0; i < numTotTracks; i++)
         {
             if (initialGuess)
             {
-                points3d[i] = initialGuess->points[i] != Vec3::Zero() ? initialGuess->points[i] : DEFAULT_POINT_POS;
+                // points3d[i] = initialGuess->points[i] != Vec3::Zero() ? initialGuess->points[i] : DEFAULT_POINT_POS;
+                Vec3 rawPoint = initialGuess->points[i] != Vec3::Zero() ? initialGuess->points[i] : DEFAULT_POINT_POS;
+                points3d[i] = (startMatInv * rawPoint.homogeneous()).head<3>();
             }
             else
             {
@@ -170,7 +175,7 @@ namespace SfM::solve
         {
             if (initialGuess)
             {
-                Mat4 viewMat = initialGuess->extrinsics[i].inverse();
+                Mat4 viewMat = (initialGuess->extrinsics[i] * startMatInv).inverse();
                 setRotation(viewMat.block<3, 3>(0, 0), &extrinsics[i * 6]);
                 extrinsics[i * 6 + 3] = viewMat(0, 3);
                 extrinsics[i * 6 + 4] = viewMat(1, 3);
@@ -290,7 +295,7 @@ namespace SfM::solve
             viewMatrix.block<3, 3>(0, 0) = R;
             viewMatrix.block<3, 1>(0, 3) = t;
 
-            result.extrinsics.push_back(startTransform * viewMatrix);
+            result.extrinsics.push_back(startTransform * startMat * viewMatrix);
         }
 
         result.points = std::move(points3d);
@@ -300,7 +305,10 @@ namespace SfM::solve
         {
             result.inlierMask[i] = result.points[i] != DEFAULT_POINT_POS;
 
-            result.points[i] = (startTransform * scale * result.points[i].homogeneous()).head<3>();
+            // result.points[i] = (startTransform * scale * result.points[i].homogeneous()).head<3>();
+            Vec4 pointLocal = result.points[i].homogeneous();
+            pointLocal.head<3>() *= scale;
+            result.points[i] = (startTransform * startMat * pointLocal).head<3>();
         }
 
         return result;
