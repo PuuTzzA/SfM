@@ -142,15 +142,15 @@ namespace SfM::solve
                 Vec3 x2;
                 x2 << points2[i], static_cast<REAL>(1.);
 
+                // Linear system of equations:
+                // lamda2 * x2 = R * (lamda1 * x1) + t 
+                // Matrix form: [-R*x1 x2] * [lamda1; lamda2] = t
+
                 /* Vec3 Rx1 = R * x1;
                 Eigen::Matrix<REAL, 3, 2> A;
                 A.col(0) = -Rx1;
                 A.col(1) = x2;
                 Vec2 lambdas = (A.transpose() * A).inverse() * (A.transpose() * T); */
-
-                // Linear Triangulation (Least Squares)
-                // Solve: lambda1 * x1 - lambda2 * (R*x2) = t
-                // Matrix form: [x1  -R*x2] * [l1; l2] = t
 
                 Vec3 Rx1 = candidate.R * x1;
 
@@ -194,15 +194,15 @@ namespace SfM::solve
             Vec3 x2;
             x2 << points2[i], static_cast<REAL>(1.);
 
+            // Linear system of equations:
+            // lamda2 * x2 = R * (lamda1 * x1) + t 
+            // Matrix form: [-R*x1 x2] * [lamda1; lamda2] = t
+
             /* Vec3 Rx1 = R * x1;
             Eigen::Matrix<REAL, 3, 2> A;
             A.col(0) = -Rx1;
             A.col(1) = x2;
             Vec2 lambdas = (A.transpose() * A).inverse() * (A.transpose() * T); */
-
-            // Linear Triangulation (Least Squares)
-            // Solve: lambda1 * x1 - lambda2 * (R*x2) = t
-            // Matrix form: [x1  -R*x2] * [l1; l2] = t
 
             Vec3 Rx1 = R * x1;
 
